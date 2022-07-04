@@ -9,4 +9,5 @@ class Year extends Model
 {
     use HasFactory;
     protected $table = 'year';
+    public $timestamps = false;
 }

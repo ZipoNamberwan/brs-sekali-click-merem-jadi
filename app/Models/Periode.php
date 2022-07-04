@@ -9,4 +9,5 @@ class Periode extends Model
 {
     use HasFactory;
     protected $table = 'periode';
+    public $timestamps = false;
 }
