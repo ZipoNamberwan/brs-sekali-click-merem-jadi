@@ -11,4 +11,13 @@ class CurrentData extends Model
     protected $table = 'current_data';
     public $timestamps = false;
     protected $guarded = [];
+
+    public function monthdetail()
+    {
+        return $this->belongsTo(Month::class, 'month_id');
+    }
+    public function yeardetail()
+    {
+        return $this->belongsTo(Year::class, 'year_id');
+    }
 }

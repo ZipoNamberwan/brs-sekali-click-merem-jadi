@@ -15,4 +15,6 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/', [MainController::class, 'index']);
+Route::get('/upload', [MainController::class, 'showUpload']);
 Route::post('/generate', [MainController::class, 'generate']);
+Route::post('/upload', [MainController::class, 'upload']);

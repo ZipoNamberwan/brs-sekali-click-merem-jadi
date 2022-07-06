@@ -64,6 +64,10 @@
                                 <i class="fas fa-home text-primary"></i>
                                 <span class="nav-link-text">BRS Generate</span>
                             </a>
+                            <a class="nav-link" href="/upload">
+                                <i class="fas fa-upload text-primary"></i>
+                                <span class="nav-link-text">Upload</span>
+                            </a>
                         </li>
                     </ul>
                 </div>
