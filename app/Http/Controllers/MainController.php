@@ -54,20 +54,151 @@ class MainController extends Controller
             'year' => 'required',
         ]);
 
+        $result = [
+            'Indeks Harga Konsumen/Inflasi Menurut Kelompok' => [],
+        ];
+
         $date = Year::find($request->year)->code . '-' . Month::find($request->month)->code . '-01';
         $currentyear = date('Y', strtotime($date . ' -1 months'));
         $currentmonth = date('m', strtotime($date . ' -1 months'));
-
-        $currentdata = CurrentData::where([
-            'month_id' => Month::where(['code' => $currentmonth])->first()->id,
-            'year_id' => Year::where(['code' => $currentyear])->first()->id
-        ]);
 
         $prevdate = $currentyear . '-' . $currentmonth . '-01';
         $prevyear = date('Y', strtotime($prevdate . ' -1 months'));
         $prevmonth = date('m', strtotime($prevdate . ' -1 months'));
 
-        $kelompok = $currentdata->where(['flag' => 1])->get();
+        $yearbefore = date('Y', strtotime($date . ' -12 months'));
+
+        //Bab 1. Paragraf pertama
+        $infcurrent = CurrentData::where([
+            'month_id' => Month::where(['code' => $currentmonth])->first()->id,
+            'year_id' => Year::where(['code' => $currentyear])->first()->id,
+            'flag' => 0
+        ])->first();
+        $infprev = CurrentData::where([
+            'month_id' => Month::where(['code' => $prevmonth])->first()->id,
+            'year_id' => Year::where(['code' => $prevyear])->first()->id,
+            'flag' => 0
+        ])->first();
+        $first_pg = 'Perkembangan harga berbagai komoditas pada ' . $infcurrent->monthdetail->name . ' ' . $infcurrent->yeardetail->name .
+            ' secara umum menunjukkan adanya ' . Utilities::getInfTrendString($infcurrent->INFMOM) .
+            '. Berdasarkan hasil pemantauan BPS di pasar tradisional dan pasar modern di Kota Probolinggo yaitu: Pasar Baru; Pasar Wonoasih; dan GM Hypermart, pada ' .
+            $infcurrent->monthdetail->name . ' ' . $infcurrent->yeardetail->name . ' terjadi ' .
+            Utilities::getInfTypeString($infcurrent->INFMOM) . ' sebesar ' .
+            Utilities::getAbsoluteValue($infcurrent->INFMOM) . ' persen, atau terjadi ' .
+            Utilities::getInfTrendString($infcurrent->INFMOM) . ' Indeks Harga Konsumen (IHK) dari ' .
+            $infprev->IHK . ' pada ' . $infprev->monthdetail->name . ' ' . $infprev->yeardetail->name . ' menjadi ' .
+            $infcurrent->IHK . ' pada ' . $infcurrent->monthdetail->name . ' ' . $infcurrent->yeardetail->name .
+            '. Tingkat inflasi tahun kalender ' . $infcurrent->monthdetail->name . ' ' . $infcurrent->yeardetail->name . '. sebesar ' . Utilities::getAbsoluteValue($infcurrent->INFYTD) .
+            ' persen dan tingkat inflasi tahun ke tahun (' . $infcurrent->monthdetail->name . ' ' . $infcurrent->yeardetail->name .
+            ' terhadap ' . $infcurrent->monthdetail->name  . ' ' . Year::where(['code' => $yearbefore])->first()->name . ') sebesar ' . Utilities::getAbsoluteValue($infcurrent->INFYOY) . ' persen.';
+
+        $result['Indeks Harga Konsumen/Inflasi Menurut Kelompok']['first'] = $first_pg;
+
+        //Bab 1. Paragraf pertama
+
+        //Bab 1. Paragraf kedua
+
+        $infcurrent = CurrentData::where([
+            'month_id' => Month::where(['code' => $currentmonth])->first()->id,
+            'year_id' => Year::where(['code' => $currentyear])->first()->id,
+            'flag' => 0
+        ])->first();
+        $kelinfcurrent = CurrentData::where([
+            'month_id' => Month::where(['code' => $currentmonth])->first()->id,
+            'year_id' => Year::where(['code' => $currentyear])->first()->id,
+            'flag' => 1
+        ])->get();
+        $kelompok_group = [
+            'inf' => [],
+            'def' => [],
+            'still' => []
+        ];
+
+        foreach ($kelinfcurrent as $k) {
+            if ($k->INFMOM > 0) $kelompok_group['inf'][] = $k;
+            else if ($k->INFMOM < 0) $kelompok_group['def'][] = $k;
+            else $kelompok_group['still'][] = $k;
+        }
+        $sentence_group = [
+            'inf' => [],
+            'def' => [],
+            'still' => []
+        ];
+
+        foreach ($kelompok_group as $key => $value) {
+            $s = [];
+            foreach ($value as $v) {
+                if ($key != 'still')
+                    $s[] = 'kelompok ' . strtolower($v->item_name) . ' sebesar ' . Utilities::getAbsoluteValue($v->INFMOM) . ' persen';
+                else $s[] = strtolower($v->item_name);
+            }
+            $sentence_group[$key] = Utilities::getSentenceFromArray($s, '; ');
+        }
+
+        $second_pg = ucfirst(Utilities::getInfTypeString($infcurrent->INFMOM)) . ' terjadi karena adanya ' .
+            Utilities::getInfTrendString($infcurrent->INFMOM) .
+            ' harga yang ditunjukkan oleh ' . Utilities::getInfTrendString($infcurrent->INFMOM) . ' indeks ' .
+            (Utilities::isInflation($infcurrent->INFMOM) ? count($kelompok_group['inf']) : count($kelompok_group['def'])) .
+            ' kelompok pengeluaran, yaitu: ' . (Utilities::isInflation($infcurrent->INFMOM) ? $sentence_group['inf'] : $sentence_group['def']) .
+
+            ((!Utilities::isInflation($infcurrent->INFMOM) ? count($kelompok_group['inf']) : count($kelompok_group['def'])) > 0 ?
+                ('. Sedangkan ' . (!Utilities::isInflation($infcurrent->INFMOM) ? count($kelompok_group['inf']) : count($kelompok_group['def'])) .
+                    ' kelompok pengeluaran yang mengalami ' . Utilities::getInfTrendString($infcurrent->INFMOM, true) . ' indeks adalah ' .
+                    (!Utilities::isInflation($infcurrent->INFMOM) ? $sentence_group['inf'] : $sentence_group['def'])) : '') .
+
+            (count($kelompok_group['still']) > 0 ?
+                ('. Sementara itu, ' . count($kelompok_group['still']) . ' kelompok pengeluaran yang tidak mengalami perubahan indeks, yaitu: ' . $sentence_group['still'] . '.') : '.');
+
+        $result['Indeks Harga Konsumen/Inflasi Menurut Kelompok']['second'] = $second_pg;
+
+        //Bab 1. Paragraf kedua
+
+        //Bab 1. Paragraf keempat
+        $sentence_group = [
+            'inf' => [],
+            'def' => [],
+            'still' => []
+        ];
+
+        foreach ($kelompok_group as $key => $value) {
+            $s = [];
+            foreach ($value as $v) {
+                if ($key != 'still')
+                    $s[] = 'kelompok ' . strtolower($v->item_name) . ' sebesar ' . Utilities::getAbsoluteValue($v->ANDILMOM) . ' persen';
+                else $s[] = strtolower($v->item_name);
+            }
+            $sentence_group[$key] = Utilities::getSentenceFromArray($s, '; ');
+        }
+
+        $fourth_pg = 'Pada ' . $infcurrent->monthdetail->name . ' ' . $infcurrent->yeardetail->name . ' dari '
+            . count($kelinfcurrent) . ' kelompok pengeluaran, ' .
+            ((Utilities::isInflation($infcurrent->INFMOM) ? count($kelompok_group['inf']) : count($kelompok_group['def'])) > 0 ? (((Utilities::isInflation($infcurrent->INFMOM) ? count($kelompok_group['inf']) : count($kelompok_group['def']))) . ' kelompok memberikan andil/sumbangan ' . Utilities::getInfTypeString($infcurrent->INFMOM) . ', ') : '') .
+            ((!Utilities::isInflation($infcurrent->INFMOM) ? count($kelompok_group['inf']) : count($kelompok_group['def'])) > 0 ? (((!Utilities::isInflation($infcurrent->INFMOM) ? count($kelompok_group['inf']) : count($kelompok_group['def']))) . ' kelompok memberikan andil/sumbangan ' . Utilities::getInfTypeString($infcurrent->INFMOM, true) . ', ') : '') .
+            (count($kelompok_group['still']) > 0 ? 'dan ' . count($kelompok_group['still']) . ' kelompok tidak memberikan andil/sumbangan terhadap ' . Utilities::getInfTypeString($infcurrent->INFMOM) . ' Kota Probolinggo' : '') .
+
+
+            ((Utilities::isInflation($infcurrent->INFMOM) ? count($kelompok_group['inf']) : count($kelompok_group['def'])) > 0 ? ('. Kelompok pengeluaran yang memberikan andil/sumbangan ' . Utilities::getInfTypeString($infcurrent->INFMOM) . ', yaitu: ' . (Utilities::isInflation($infcurrent->INFMOM) ? $sentence_group['inf'] : $sentence_group['def']) . '.')  : '') .
+
+            ((!Utilities::isInflation($infcurrent->INFMOM) ? count($kelompok_group['inf']) : count($kelompok_group['def'])) > 0 ? (' Kelompok pengeluaran yang memberikan andil/sumbangan ' . Utilities::getInfTypeString($infcurrent->INFMOM, true) . ', yaitu: ' . (!Utilities::isInflation($infcurrent->INFMOM) ? $sentence_group['inf'] : $sentence_group['def']) . '.')  : '') .
+
+            (count($kelompok_group['still']) > 0 ? (' Sementara kelompok pengeluaran yang tidak memberikan andil/sumbangan terhadap ' . Utilities::getInfTypeString($infcurrent->INFMOM) . ' Kota Probolinggo, yaitu ' . $sentence_group['still'] . '.') : '');
+
+        $result['Indeks Harga Konsumen/Inflasi Menurut Kelompok']['fourth'] = $fourth_pg;
+
+        //Bab 1. Paragraf keempat
+
+        //Bab 1. Paragraf ketiga
+
+
+        
+        //Bab 1. Paragraf ketiga
+
+        //Bab 1. Detail Inflasi per Kelompok
+        $infcurrent = CurrentData::where([
+            'month_id' => Month::where(['code' => $currentmonth])->first()->id,
+            'year_id' => Year::where(['code' => $currentyear])->first()->id
+        ]);
+        $kelompok = $infcurrent->where(['flag' => 1])->get();
         $kelompok_result = [];
         foreach ($kelompok as $k) {
             $paragraph_array = [];
@@ -77,7 +208,7 @@ class MainController extends Controller
             } else {
                 //paragraf pertama
 
-                $previousdata = CurrentData::where([
+                $infprev = CurrentData::where([
                     'month_id' => Month::where(['code' => $prevmonth])->first()->id,
                     'year_id' => Year::where(['code' => $prevyear])->first()->id,
                     'item_code' => $k->item_code
@@ -86,7 +217,7 @@ class MainController extends Controller
                 $paragraph_array['first'] = 'Kelompok ini pada ' . $k->monthdetail->name . ' ' . $k->yeardetail->name .
                     ' mengalami ' . Utilities::getInfTypeString($k->INFMOM) . ' sebesar ' .
                     Utilities::getAbsoluteValue($k->INFMOM) . ' persen atau terjadi ' . Utilities::getInfTrendString($k->INFMOM) .
-                    ' indeks dari ' . $previousdata->IHK . ' pada ' . $previousdata->monthdetail->name . ' ' . $previousdata->yeardetail->name .
+                    ' indeks dari ' . $infprev->IHK . ' pada ' . $infprev->monthdetail->name . ' ' . $infprev->yeardetail->name .
                     ' menjadi ' . $k->IHK . ' pada ' . $k->monthdetail->name . ' ' . $k->yeardetail->name;
 
                 //paragraf pertama
@@ -115,18 +246,18 @@ class MainController extends Controller
                 foreach ($subkelompok_group as $key => $value) {
                     $s = [];
                     foreach ($value as $v) {
-                        $s[] = 'subkelompok ' . strtolower($v->item_name) . ($v->INFMOM != 0 ? (' sebesar ' . $v->INFMOM . ' persen') : '');
+                        $s[] = 'subkelompok ' . strtolower($v->item_name) . (Utilities::getAbsoluteValue($v->INFMOM) != 0 ? (' sebesar ' . Utilities::getAbsoluteValue($v->INFMOM) . ' persen') : '');
                     }
                     if (count($value) != 0) {
                         if ($key == 'inf') {
                             $sentence['first'][] = count($value) . ' subkelompok mengalami inflasi';
-                            $sentence['second'][] = 'Subkelompok yang mengalami inflasi yaitu: ' . Utilities::getSentenceFromArray($s);
+                            $sentence['second'][] = 'Subkelompok yang mengalami inflasi yaitu: ' . Utilities::getSentenceFromArray($s, '; ');
                         } else if ($key == 'def') {
                             $sentence['first'][] = count($value) . ' subkelompok mengalami deflasi';
-                            $sentence['second'][] = 'Subkelompok yang mengalami deflasi yaitu: ' . Utilities::getSentenceFromArray($s);
+                            $sentence['second'][] = 'Subkelompok yang mengalami deflasi yaitu: ' . Utilities::getSentenceFromArray($s, '; ');
                         } else {
                             $sentence['first'][] = count($value) . ' subkelompok tidak mengalami perubahan';
-                            $sentence['second'][] = 'Subkelompok yang tidak mengalami perubahan yaitu: ' . Utilities::getSentenceFromArray($s);
+                            $sentence['second'][] = 'Subkelompok yang tidak mengalami perubahan yaitu: ' . Utilities::getSentenceFromArray($s, '; ');
                         }
                     }
                 }
@@ -142,19 +273,38 @@ class MainController extends Controller
                 ])->where('item_code', 'LIKE', $k->item_code . '%')->get();
 
                 $komoditas_group = [
-                    'inf' => [],
-                    'def' => []
+                    'inf' => collect(),
+                    'def' => collect()
                 ];
                 foreach ($komoditas as $kom) {
-                    if ($kom->INFMOM > 0) $komoditas_group['inf'][] = $kom;
-                    else if ($kom->INFMOM < 0) $komoditas_group['def'][] = $kom;
+                    if ($kom->INFMOM > 0) $komoditas_group['inf']->push($kom);
+                    else if ($kom->INFMOM < 0) $komoditas_group['def']->push($kom);
+                }
+
+                $komoditas_group['inf'] = $komoditas_group['inf']->sort(function ($a, $b) {
+                    if ($a->ANDILMOM == $b->ANDILMOM) {
+                        return 0;
+                    }
+                    return ($a->ANDILMOM < $b->ANDILMOM) ? 1 : -1;
+                });
+
+                $komoditas_group['def'] = $komoditas_group['def']->sort(function ($a, $b) {
+                    if ($a->ANDILMOM == $b->ANDILMOM) {
+                        return 0;
+                    }
+                    return ($a->ANDILMOM < $b->ANDILMOM) ? -1 : 1;
+                });
+
+                if ($k->item_code == '01') {
+                    $komoditas_group['inf'] = $komoditas_group['inf']->take(10);
+                    $komoditas_group['def'] = $komoditas_group['def']->take(10);
                 }
 
                 $sentence = [];
                 foreach ($komoditas_group as $key => $value) {
                     $s = [];
                     foreach ($value as $v) {
-                        $s[] = strtolower($v->item_name) . ' sebesar ' . $v->ANDILMOM . ' persen';
+                        $s[] = strtolower($v->item_name) . ' sebesar ' . Utilities::getAbsoluteValue($v->ANDILMOM) . ' persen';
                     }
                     if ($key == 'inf') {
                         if (count($value) > 1) {
@@ -180,6 +330,9 @@ class MainController extends Controller
 
             $kelompok_result[$k->item_name] = $paragraph_array;
         }
-        dd($kelompok_result);
+        //Bab 1. Detail Inflasi per Kelompok
+
+        $result['Indeks Harga Konsumen/Inflasi Menurut Kelompok']['kelompok_result'] = $kelompok_result;
+        return $result;
     }
 }

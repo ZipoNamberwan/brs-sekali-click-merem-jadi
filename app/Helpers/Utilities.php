@@ -4,15 +4,20 @@ namespace App\Helpers;
 
 class Utilities
 {
-    public static function getInfTypeString($value)
+    public static function getInfTypeString($value, bool $negate = false)
     {
-        if ($value < 0) return 'deflasi';
-        return 'inflasi';
+        if ($value < 0) return !$negate ? 'deflasi' : 'inflasi';
+        return !$negate ? 'inflasi' : 'deflasi';
     }
-    public static function getInfTrendString($value)
+    public static function getInfTrendString($value, bool $negate = false)
     {
-        if ($value < 0) return 'penurunan';
-        return 'kenaikan';
+        if ($value < 0) return !$negate ? 'penurunan' : 'kenaikan';
+        return !$negate ? 'kenaikan' : 'penurunan';
+    }
+    public static function isInflation($value)
+    {
+        if ($value < 0) return false;
+        return true;
     }
     public static function getAbsoluteValue($value)
     {
