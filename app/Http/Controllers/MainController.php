@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Imports\CurrentDataImport;
+use App\Imports\InflationDataImport;
 use App\Helpers\Utilities;
 use App\Imports\InflationDataByAreaImport;
-use App\Models\CurrentData;
+use App\Models\InflationData;
 use App\Models\Month;
 use App\Models\Year;
 use Exception;
@@ -42,11 +42,10 @@ class MainController extends Controller
         ]);
 
         try {
-            Excel::import(new CurrentDataImport, $request->file('file-inf'));
+            Excel::import(new InflationDataImport, $request->file('file-inf'));
             Excel::import(new InflationDataByAreaImport, $request->file('file-inf-area'));
             return redirect('/upload')->with('success-upload', 'Upload Berhasil');
         } catch (Exception $e) {
-            dd($e);
             return redirect('/upload')->with('error-upload', 'Upload Gagal. Cek apakah file yang diupload sudah sesuai');
         }
     }
@@ -78,23 +77,23 @@ class MainController extends Controller
         $prevmonth = Month::where(['code' => $prevmonth])->first();
         $prevyear = Year::where(['code' => $prevyear])->first();
 
-        $infcurrent = CurrentData::where([
+        $infcurrent = InflationData::where([
             'month_id' => $currentmonth->id,
             'year_id' => $currentyear->id,
         ])->get();
-        $infprev = CurrentData::where([
+        $infprev = InflationData::where([
             'month_id' => $prevmonth->id,
             'year_id' => $prevyear->id,
         ])->get();
         if (count($infcurrent) > 0 && count($infprev) > 0) {
 
             //Bab 1. Paragraf pertama
-            $infcurrent = CurrentData::where([
+            $infcurrent = InflationData::where([
                 'month_id' => $currentmonth->id,
                 'year_id' => $currentyear->id,
                 'flag' => 0
             ])->first();
-            $infprev = CurrentData::where([
+            $infprev = InflationData::where([
                 'month_id' => $prevmonth->id,
                 'year_id' => $prevyear->id,
                 'flag' => 0
@@ -118,12 +117,12 @@ class MainController extends Controller
 
             //Bab 1. Paragraf kedua
 
-            $infcurrent = CurrentData::where([
+            $infcurrent = InflationData::where([
                 'month_id' => $currentmonth->id,
                 'year_id' => $currentyear->id,
                 'flag' => 0
             ])->first();
-            $kelinfcurrent = CurrentData::where([
+            $kelinfcurrent = InflationData::where([
                 'month_id' => $currentmonth->id,
                 'year_id' => $currentyear->id,
                 'flag' => 1
@@ -214,7 +213,7 @@ class MainController extends Controller
             //Bab 1. Paragraf ketiga
 
             //Bab 1. Detail Inflasi per Kelompok
-            $infcurrent = CurrentData::where([
+            $infcurrent = InflationData::where([
                 'month_id' => $currentmonth->id,
                 'year_id' => $currentyear->id
             ]);
@@ -228,7 +227,7 @@ class MainController extends Controller
                 } else {
                     //paragraf pertama
 
-                    $infprev = CurrentData::where([
+                    $infprev = InflationData::where([
                         'month_id' => $prevmonth->id,
                         'year_id' => $prevyear->id,
                         'item_code' => $k->item_code
@@ -243,7 +242,7 @@ class MainController extends Controller
                     //paragraf pertama
 
                     //paragraf kedua
-                    $subkelompok =  CurrentData::where([
+                    $subkelompok =  InflationData::where([
                         'month_id' => $currentmonth->id,
                         'year_id' => $currentyear->id,
                         'flag' => 2,
@@ -286,7 +285,7 @@ class MainController extends Controller
                     //paragraf kedua
 
                     //paragraf ketiga
-                    $komoditas = CurrentData::where([
+                    $komoditas = InflationData::where([
                         'month_id' => $currentmonth->id,
                         'year_id' => $currentyear->id,
                         'flag' => 3,
