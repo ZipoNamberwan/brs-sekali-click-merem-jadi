@@ -2,19 +2,18 @@
 
 namespace App\Imports;
 
-use App\Models\CurrentData;
+use App\Models\InflationDataByArea;
 use App\Models\Month;
 use App\Models\Year;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithStartRow;
 
-class CurrentDataImport implements ToCollection, WithStartRow
+class InflationDataByAreaImport implements ToCollection, WithStartRow
 {
-
     public function collection(Collection $rows)
     {
-        CurrentData::where([
+        InflationDataByArea::where([
             'month_id' => Month::where('code', $rows[0][1])->first()->id,
             'year_id' => Year::where('code', $rows[0][0])->first()->id
         ])->delete();
@@ -22,28 +21,21 @@ class CurrentDataImport implements ToCollection, WithStartRow
         foreach ($rows as $row) {
             $month = Month::where('code', $row[1])->first();
             $year = Year::where('code', $row[0])->first();
-            CurrentData::create([
+            InflationDataByArea::create([
                 'month_id' => $month->id,
                 'year_id' => $year->id,
                 'area_code' => $row[2],
                 'area_name' => $row[3],
-                'item_code' => $row[4],
-                'item_name' => $row[5],
-                'flag' => $row[6],
-                'NK' => $row[7],
-                'IHK' => $row[8],
-                'INFMOM' => $row[9],
-                'INFYTD' => $row[10],
-                'INFYOY' => $row[11],
-                'ANDILMOM' => $row[12],
-                'ANDILYTD' => $row[13],
-                'ANDILYOY' => $row[14],
+                'IHK' => $row[5],
+                'INFMOM' => $row[6],
+                'INFYTD' => $row[7],
+                'INFYOY' => $row[8],
             ]);
         }
     }
 
     public function startRow(): int
     {
-        return 2;
+        return 4;
     }
 }

@@ -28,7 +28,7 @@ return new class extends Migration
             $table->foreignId('month_id')->constrained('month');
             $table->foreignId('year_id')->constrained('year');
         });
-        Schema::create('current_data', function (Blueprint $table) {
+        Schema::create('inflation_data', function (Blueprint $table) {
             $table->id()->autoincrement();
             $table->foreignId('month_id')->constrained('month');
             $table->foreignId('year_id')->constrained('year');

@@ -29,6 +29,15 @@
 </div>
 
 <div class="container-fluid mt--6">
+    @if (session('error-generate'))
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <span class="alert-icon"><i class="fas fa-check-circle"></i></span>
+        <span class="alert-text"><strong>Error! </strong> {{ implode('; ',session('error-generate')) }} </span>
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">×</span>
+        </button>
+    </div>
+    @endif
     <div class="row">
         <div class="col">
             <div class="card-wrapper">

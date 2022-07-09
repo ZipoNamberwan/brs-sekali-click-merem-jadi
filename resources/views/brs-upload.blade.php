@@ -64,18 +64,36 @@
                             <div class="form-row">
                                 <div class="col-md-8 mb-3">
                                     <div class="form-row">
-                                        <div class="col-md-3">
-                                            <label class="form-control-label" for="quantity">Upload Data Excel BRS</label>
+                                        <div class="col-md-8">
+                                            <label class="form-control-label" for="quantity">Upload Data Excel Inflasi</label>
                                         </div>
                                     </div>
                                     <div class="form-row">
-                                        <div class="col-md-6">
+                                        <div class="col-md-8">
                                             <div class="custom-file">
-                                                <input type="file" name="file" class="custom-file-input" id="customFileLang" lang="en" accept=".xlsx,.xls" onchange="onChange()">
-                                                <label class="custom-file-label" id="inputlabel" for="customFileLang">Pilih File</label>
+                                                <input type="file" name="file-inf" class="custom-file-input" id="file-inf" lang="en" accept=".xlsx,.xls" onchange="onChange('file-inf')">
+                                                <label class="custom-file-label" id="inputlabel-file-inf" for="customFileLang">Pilih File</label>
                                             </div>
                                         </div>
-                                        @error('file')
+                                        @error('file-inf')
+                                        <div class="error-feedback">
+                                            {{$message}}
+                                        </div>
+                                        @enderror
+                                    </div>
+                                    <div class="form-row mt-2">
+                                        <div class="col-md-8">
+                                            <label class="form-control-label" for="quantity">Upload Data Excel Inflasi per Kota</label>
+                                        </div>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="col-md-8">
+                                            <div class="custom-file">
+                                                <input type="file" name="file-inf-area" class="custom-file-input" id="file-inf-area" lang="en" accept=".xlsx,.xls" onchange="onChange('file-inf-area')">
+                                                <label class="custom-file-label" id="inputlabel-file-inf-area" for="customFileLang">Pilih File</label>
+                                            </div>
+                                        </div>
+                                        @error('file-inf-area')
                                         <div class="error-feedback">
                                             {{$message}}
                                         </div>
@@ -97,10 +115,10 @@
 <script src="/assets/vendor/select2/dist/js/select2.min.js"></script>
 
 <script>
-    function onChange() {
-        var fileInput = document.getElementById('customFileLang');
+    function onChange(id) {
+        var fileInput = document.getElementById(id);
         var filename = fileInput.files[0].name;
-        document.getElementById('inputlabel').innerHTML = filename;
+        document.getElementById('inputlabel-' + id).innerHTML = filename;
     }
 </script>
 @endsection

@@ -5,10 +5,10 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class CurrentData extends Model
+class InflationDataByArea extends Model
 {
     use HasFactory;
-    protected $table = 'inflation_data';
+    protected $table = 'inflation_data_by_area';
     public $timestamps = false;
     protected $guarded = [];
 
