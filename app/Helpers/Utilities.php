@@ -30,4 +30,12 @@ class Utilities
         $both  = array_filter(array_merge(array($first), $last), 'strlen');
         return join($lastseparator, $both);
     }
+    public static function getAreaType($code)
+    {
+        if (substr($code, 2, 1) == '7') {
+            return 'Kota';
+        } else {
+            return 'Kabupaten';
+        }
+    }
 }

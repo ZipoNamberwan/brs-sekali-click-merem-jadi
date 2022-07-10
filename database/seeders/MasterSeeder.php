@@ -64,6 +64,10 @@ class MasterSeeder extends Seeder
             'code' => '12'
         ]);
         Year::create([
+            'name' => '2019',
+            'code' => '2019'
+        ]);
+        Year::create([
             'name' => '2020',
             'code' => '2020'
         ]);

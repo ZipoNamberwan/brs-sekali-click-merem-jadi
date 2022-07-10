@@ -6,6 +6,7 @@ use App\Imports\InflationDataImport;
 use App\Helpers\Utilities;
 use App\Imports\InflationDataByAreaImport;
 use App\Models\InflationData;
+use App\Models\InflationDataByArea;
 use App\Models\Month;
 use App\Models\Year;
 use Exception;
@@ -65,27 +66,153 @@ class MainController extends Controller
         $prevyear = date('Y', strtotime($prevdate . ' -1 months'));
         $prevmonth = date('m', strtotime($prevdate . ' -1 months'));
 
-        $yearbefore = date('Y', strtotime($date . ' -12 months'));
-
-        $result = [
-            'Indeks Harga Konsumen/Inflasi Menurut Kelompok' => [],
-        ];
+        $yearminus1 = date('Y', strtotime($date . ' -12 months'));
+        $yearminus2 = date('Y', strtotime($date . ' -24 months'));
+        $yearminus3 = date('Y', strtotime($date . ' -36 months'));
 
         $currentmonth = Month::where(['code' => $currentmonth])->first();
         $currentyear = Year::where(['code' => $currentyear])->first();
 
         $prevmonth = Month::where(['code' => $prevmonth])->first();
         $prevyear = Year::where(['code' => $prevyear])->first();
+        $yearminus1 = Year::where(['code' => $yearminus1])->first();
+        $yearminus2 = Year::where(['code' => $yearminus2])->first();
+        $yearminus3 = Year::where(['code' => $yearminus3])->first();
+
+        $result = [];
 
         $infcurrent = InflationData::where([
             'month_id' => $currentmonth->id,
             'year_id' => $currentyear->id,
+            'flag' => 0
         ])->get();
         $infprev = InflationData::where([
             'month_id' => $prevmonth->id,
             'year_id' => $prevyear->id,
+            'flag' => 0
         ])->get();
-        if (count($infcurrent) > 0 && count($infprev) > 0) {
+        $infyearminus1 = InflationData::where([
+            'month_id' => $currentmonth->id,
+            'year_id' => $yearminus1->id,
+            'flag' => 0
+        ])->get();
+        $infyearminus2 = InflationData::where([
+            'month_id' => $currentmonth->id,
+            'year_id' => $yearminus2->id,
+            'flag' => 0
+        ])->get();
+
+        if (count($infcurrent) > 0 && count($infprev) > 0 && count($infyearminus1) > 0 && count($infyearminus2) > 0) {
+
+            $infcurrent = InflationData::where([
+                'month_id' => $currentmonth->id,
+                'year_id' => $currentyear->id,
+                'flag' => 0
+            ])->first();
+            $infprev = InflationData::where([
+                'month_id' => $prevmonth->id,
+                'year_id' => $prevyear->id,
+                'flag' => 0
+            ])->first();
+
+            //Judul
+            $result['Perkembangan Indeks Harga Konsumen Kota Probolinggo '
+                . $infcurrent->monthdetail->name . ' ' . $infcurrent->yeardetail->name] =
+                $infcurrent->monthdetail->name . ' ' . $infcurrent->yeardetail->name .
+                ' ' . Utilities::getInfTypeString($infcurrent->INFMOM) . ' bulanan Kota Probolinggo sebesar ' .
+                Utilities::getAbsoluteValue($infcurrent->INFMOM) . ' persen, ' . Utilities::getInfTypeString($infcurrent->INFYTD) . ' tahun kalender sebesar ' .
+                Utilities::getAbsoluteValue($infcurrent->INFYTD) . ' persen dan ' . Utilities::getInfTypeString($infcurrent->INFYOY) . ' tahunan sebesar ' .
+                Utilities::getAbsoluteValue($infcurrent->INFYOY) . ' persen.';
+            //Judul
+
+            //Intro
+            $result['Intro'] = [
+                'first' => '',
+                'second' => '',
+                'third' => '',
+            ];
+
+            $infbyarea = InflationDataByArea::where([
+                'month_id' => $currentmonth->id,
+                'year_id' => $currentyear->id
+            ])->get();
+
+            $jatimarea = [
+                'inf' => collect(),
+                'def' => collect()
+            ];
+
+            foreach ($infbyarea as $area) {
+                if (substr($area->area_code, 0, 2) == '35') {
+                    if ($area->INFMOM > 0)
+                        $jatimarea['inf']->push($area);
+                    else if ($area->INFMOM < 0)
+                        $jatimarea['def']->push($area);
+                }
+            }
+
+            $jatimarea['inf'] = $jatimarea['inf']->sort(function ($a, $b) {
+                if ($a->INFMOM == $b->INFMOM) {
+                    return 0;
+                }
+                return ($a->INFMOM < $b->INFMOM) ? 1 : -1;
+            });
+
+            $jatimarea['def'] = $jatimarea['def']->sort(function ($a, $b) {
+                if ($a->INFMOM == $b->INFMOM) {
+                    return 0;
+                }
+                return ($a->INFMOM < $b->INFMOM) ? -1 : 1;
+            });
+
+            $result['Intro']['first'] = 'Pada ' . $infcurrent->monthdetail->name . ' ' . $infcurrent->yeardetail->name .
+                ' Kota Probolinggo terjadi ' . Utilities::getInfTypeString($infcurrent->INFMOM) .
+                ' sebesar ' . Utilities::getAbsoluteValue($infcurrent->INFMOM) .
+                ' persen dengan Indeks Harga Konsumen (IHK) sebesar ' . $infcurrent->IHK .
+
+                '. Dari ' . (count($jatimarea['inf']) + count($jatimarea['def'])) . ' kota IHK di Jawa Timur, ' .
+                (count($jatimarea['inf']) > 0 ? ((count($jatimarea['inf']) == (count($jatimarea['inf']) + count($jatimarea['def'])) ? 'seluruh' : (count($jatimarea['inf']))) . ' kota mengalami inflasi') : '') .
+                (count($jatimarea['inf']) > 0 && count($jatimarea['def']) > 0 ? ' dan ' : '') .
+                (count($jatimarea['def']) > 0 ? ((count($jatimarea['def']) == (count($jatimarea['def']) + count($jatimarea['def'])) ? 'seluruh' : (count($jatimarea['def']))) . ' kota mengalami deflasi') : '') .
+                '.' .
+
+                (count($jatimarea['inf']) > 0 ? (count($jatimarea['inf']) == 1 ?
+                    (' Inflasi terjadi di ' . Utilities::getAreaType($jatimarea['inf']->first()->area_code) . ' ' . ucfirst(strtolower($jatimarea['inf']->first()->area_name)) . ' sebesar ' . Utilities::getAbsoluteValue($jatimarea['inf']->first()->INFMOM) . ' persen dengan IHK sebesar ' . $jatimarea['inf']->first()->IHK . '. ')
+                    : (' Inflasi tertinggi terjadi di ' . Utilities::getAreaType($jatimarea['inf']->first()->area_code) . ' ' .
+                        ucfirst(strtolower($jatimarea['inf']->first()->area_name)) . ' sebesar ' . Utilities::getAbsoluteValue($jatimarea['inf']->first()->INFMOM) .
+                        ' persen dengan IHK sebesar ' . $jatimarea['inf']->first()->IHK .
+
+                        ' dan inflasi terendah terjadi di ' . Utilities::getAreaType($jatimarea['inf']->last()->area_code) . ' ' .
+                        ucfirst(strtolower($jatimarea['inf']->last()->area_name)) . ' sebesar ' . Utilities::getAbsoluteValue($jatimarea['inf']->last()->INFMOM) .
+                        ' persen dengan IHK sebesar ' . $jatimarea['inf']->last()->IHK . '.')) : '') .
+
+                (count($jatimarea['def']) > 0 ? (count($jatimarea['def']) == 1 ?
+                    (' Deflasi terjadi di ' . Utilities::getAreaType($jatimarea['def']->first()->area_code) . ' ' . ucfirst(strtolower($jatimarea['def']->first()->area_name)) . ' sebesar ' . Utilities::getAbsoluteValue($jatimarea['def']->first()->INFMOM) . ' persen dengan IHK sebesar ' . $jatimarea['def']->first()->IHK . '. ')
+                    : (' Deflasi tertinggi terjadi di ' . Utilities::getAreaType($jatimarea['def']->first()->area_code) . ' ' .
+                        ucfirst(strtolower($jatimarea['def']->first()->area_name)) . ' sebesar ' . Utilities::getAbsoluteValue($jatimarea['def']->first()->INFMOM) .
+                        ' persen dengan IHK sebesar ' . $jatimarea['def']->first()->IHK .
+
+                        ' dan deflasi terendah terjadi di ' . Utilities::getAreaType($jatimarea['def']->last()->area_code) . ' ' .
+                        ucfirst(strtolower($jatimarea['def']->last()->area_name)) . ' sebesar ' . Utilities::getAbsoluteValue($jatimarea['def']->last()->INFMOM) .
+                        ' persen dengan IHK sebesar ' . $jatimarea['def']->last()->IHK . '.')) : '');
+
+            $result['Intro']['third'] = 'Tingkat ' . Utilities::getInfTypeString($infcurrent->INFYTD) . ' tahun kalender '
+                . $infcurrent->monthdetail->name . ' ' . $infcurrent->yeardetail->name .
+                ' sebesar ' . Utilities::getAbsoluteValue($infcurrent->INFYTD) .
+                ' persen dan tingkat ' . Utilities::getInfTypeString($infcurrent->INFYOY) . ' tahun ke tahun (' . $infcurrent->monthdetail->name . ' ' . $infcurrent->yeardetail->name .
+                ' terhadap ' . $infcurrent->monthdetail->name . ' ' . $yearminus1->name . ') sebesar ' .
+                Utilities::getAbsoluteValue($infcurrent->INFYOY) . ' persen.';
+            //Intro
+
+            $infcurrent = InflationData::where([
+                'month_id' => $currentmonth->id,
+                'year_id' => $currentyear->id,
+            ])->get();
+            $infprev = InflationData::where([
+                'month_id' => $prevmonth->id,
+                'year_id' => $prevyear->id,
+            ])->get();
+
 
             //Bab 1. Paragraf pertama
             $infcurrent = InflationData::where([
@@ -107,9 +234,9 @@ class MainController extends Controller
                 Utilities::getInfTrendString($infcurrent->INFMOM) . ' Indeks Harga Konsumen (IHK) dari ' .
                 $infprev->IHK . ' pada ' . $infprev->monthdetail->name . ' ' . $infprev->yeardetail->name . ' menjadi ' .
                 $infcurrent->IHK . ' pada ' . $infcurrent->monthdetail->name . ' ' . $infcurrent->yeardetail->name .
-                '. Tingkat inflasi tahun kalender ' . $infcurrent->monthdetail->name . ' ' . $infcurrent->yeardetail->name . '. sebesar ' . Utilities::getAbsoluteValue($infcurrent->INFYTD) .
-                ' persen dan tingkat inflasi tahun ke tahun (' . $infcurrent->monthdetail->name . ' ' . $infcurrent->yeardetail->name .
-                ' terhadap ' . $infcurrent->monthdetail->name  . ' ' . Year::where(['code' => $yearbefore])->first()->name . ') sebesar ' . Utilities::getAbsoluteValue($infcurrent->INFYOY) . ' persen.';
+                '. Tingkat ' . Utilities::getInfTypeString($infcurrent->INFYTD) . ' tahun kalender ' . $infcurrent->monthdetail->name . ' ' . $infcurrent->yeardetail->name . ' sebesar ' . Utilities::getAbsoluteValue($infcurrent->INFYTD) .
+                ' persen dan tingkat ' . Utilities::getInfTypeString($infcurrent->INFYOY) . ' tahun ke tahun (' . $infcurrent->monthdetail->name . ' ' . $infcurrent->yeardetail->name .
+                ' terhadap ' . $infcurrent->monthdetail->name  . ' ' . $yearminus1->name . ') sebesar ' . Utilities::getAbsoluteValue($infcurrent->INFYOY) . ' persen.';
 
             $result['Indeks Harga Konsumen/Inflasi Menurut Kelompok']['first'] = $first_pg;
 
@@ -149,7 +276,7 @@ class MainController extends Controller
                 foreach ($value as $v) {
                     if ($key != 'still')
                         $s[] = 'kelompok ' . strtolower($v->item_name) . ' sebesar ' . Utilities::getAbsoluteValue($v->INFMOM) . ' persen';
-                    else $s[] = strtolower($v->item_name);
+                    else $s[] = 'kelompok ' . strtolower($v->item_name);
                 }
                 $sentence_group[$key] = Utilities::getSentenceFromArray($s, '; ');
             }
@@ -169,6 +296,7 @@ class MainController extends Controller
                     ('. Sementara itu, ' . count($kelompok_group['still']) . ' kelompok pengeluaran yang tidak mengalami perubahan indeks, yaitu: ' . $sentence_group['still'] . '.') : '.');
 
             $result['Indeks Harga Konsumen/Inflasi Menurut Kelompok']['second'] = $second_pg;
+            $result['Intro']['second'] = $second_pg;
 
             //Bab 1. Paragraf kedua
 
@@ -184,7 +312,7 @@ class MainController extends Controller
                 foreach ($value as $v) {
                     if ($key != 'still')
                         $s[] = 'kelompok ' . strtolower($v->item_name) . ' sebesar ' . Utilities::getAbsoluteValue($v->ANDILMOM) . ' persen';
-                    else $s[] = strtolower($v->item_name);
+                    else $s[] = 'kelompok ' . strtolower($v->item_name);
                 }
                 $sentence_group[$key] = Utilities::getSentenceFromArray($s, '; ');
             }
@@ -352,11 +480,94 @@ class MainController extends Controller
             //Bab 1. Detail Inflasi per Kelompok
 
             $result['Indeks Harga Konsumen/Inflasi Menurut Kelompok']['kelompok_result'] = $kelompok_result;
+
+            //Bab 2
+            $infcurrent = InflationData::where([
+                'month_id' => $currentmonth->id,
+                'year_id' => $currentyear->id,
+                'flag' => 0
+            ])->first();
+            $infyearminus1 = InflationData::where([
+                'month_id' => $currentmonth->id,
+                'year_id' => $yearminus1->id,
+                'flag' => 0
+            ])->first();
+            $infyearminus2 = InflationData::where([
+                'month_id' => $currentmonth->id,
+                'year_id' => $yearminus2->id,
+                'flag' => 0
+            ])->first();
+
+            $sentence = 'Tingkat ' . Utilities::getInfTypeString($infcurrent->INFYTD) . ' tahun kalender ' .
+                $infcurrent->monthdetail->name . ' ' . $infcurrent->yeardetail->name .
+                ' sebesar ' . Utilities::getAbsoluteValue($infcurrent->INFYTD) .
+                ' persen dan tingkat ' . Utilities::getInfTypeString($infcurrent->INFYOY) . ' tahun ke tahun (' . $infcurrent->monthdetail->name . ' ' . $infcurrent->yeardetail->name .
+                ' terhadap ' . $infcurrent->monthdetail->name . ' ' . $yearminus1->name . ') sebesar ' .
+                Utilities::getAbsoluteValue($infcurrent->INFYOY) . ' persen. ' .
+                'Sedangkan tingkat ' . Utilities::getInfTypeString($infyearminus1->INFYTD) . ' tahun kalender ' . $infyearminus1->monthdetail->name . ' ' . $infyearminus1->yeardetail->name . ' adalah sebesar ' . Utilities::getAbsoluteValue($infyearminus1->INFYTD) . ' persen dan tingkat ' . Utilities::getInfTypeString($infyearminus2->INFYTD) . ' tahun kalender ' . $infyearminus2->monthdetail->name . ' ' . $infyearminus2->yeardetail->name . ' adalah sebesar ' . Utilities::getAbsoluteValue($infyearminus2->INFYTD) . ' persen. ' .
+                'Sementara itu, tingkat ' . Utilities::getInfTypeString($infyearminus1->INFYOY) . ' tahun ke tahun untuk ' . $infyearminus1->monthdetail->name . ' ' . $infyearminus1->yeardetail->name . ' terhadap ' . $infyearminus2->monthdetail->name . ' ' . $infyearminus2->yeardetail->name . ' adalah sebesar ' . Utilities::getAbsoluteValue($infyearminus1->INFYOY) . ' persen dan tingkat ' . Utilities::getInfTypeString($infyearminus2->INFYOY) . ' tahun ke tahun untuk ' . $infyearminus2->monthdetail->name . ' ' . $infyearminus2->yeardetail->name . ' terhadap ' . $infyearminus2->monthdetail->name . ' ' . $yearminus3->name . ' adalah sebesar ' . Utilities::getAbsoluteValue($infyearminus2->INFYOY) . ' persen.';
+
+            $result['Perbandingan Inflasi Tahunan'] = $sentence;
+
+            //Bab 2
+
+            //Bab 3
+            $result['Indeks Harga Konsumen dan Inflasi Antarkota di Jawa Timur'] = [];
+
+            $intro = 'Pada ' . $infcurrent->monthdetail->name . ' ' . $infcurrent->yeardetail->name . ' secara nasional Indeks Harga Konsumen (IHK) dihitung pada 90 kota IHK, dengan penghitungan tahun dasar 2018=100.';
+            $result['Indeks Harga Konsumen dan Inflasi Antarkota di Jawa Timur'][] = $intro;
+
+            $area_sentence = [
+                'inf' => [],
+                'def' => []
+            ];
+            foreach ($area_sentence as $key => $value) {
+                for ($i = 1; $i < count($jatimarea[$key]); $i++) {
+                    $area_sentence[$key][] = Utilities::getAreaType($jatimarea[$key][$i]->area_code) . ' ' . ucfirst(strtolower($jatimarea[$key][$i]->area_name)) . ' sebesar ' . Utilities::getAbsoluteValue($jatimarea[$key][$i]->INFMOM);
+                }
+            }
+            $sentence =
+                'Dari ' . (count($jatimarea['inf']) + count($jatimarea['def'])) . ' kota IHK di Jawa Timur, ' .
+                (count($jatimarea['inf']) > 0 ? ((count($jatimarea['inf']) == (count($jatimarea['inf']) + count($jatimarea['def'])) ? 'seluruh' : (count($jatimarea['inf']))) . ' kota mengalami inflasi') : '') .
+                (count($jatimarea['inf']) > 0 && count($jatimarea['def']) > 0 ? ' dan ' : '') .
+                (count($jatimarea['def']) > 0 ? ((count($jatimarea['def']) == (count($jatimarea['def']) + count($jatimarea['def'])) ? 'seluruh' : (count($jatimarea['def']))) . ' kota mengalami deflasi') : '') .
+                '.' .
+
+                (count($jatimarea['inf']) > 0 ? (count($jatimarea['inf']) == 1 ?
+                    (' Inflasi terjadi di ' . Utilities::getAreaType($jatimarea['inf']->first()->area_code) . ' ' . ucfirst(strtolower($jatimarea['inf']->first()->area_name)) . ' sebesar ' . Utilities::getAbsoluteValue($jatimarea['inf']->first()->INFMOM) . ' persen. ')
+                    : (' Inflasi tertinggi terjadi di ' . Utilities::getAreaType($jatimarea['inf']->first()->area_code) . ' ' .
+                        ucfirst(strtolower($jatimarea['inf']->first()->area_name)) . ' sebesar ' . Utilities::getAbsoluteValue($jatimarea['inf']->first()->INFMOM) .
+                        ' persen diikuti ' . Utilities::getSentenceFromArray($area_sentence['inf']) . '.')) : '') .
+
+                (count($jatimarea['def']) > 0 ? (count($jatimarea['def']) == 1 ?
+                    (' Deflasi terjadi di ' . Utilities::getAreaType($jatimarea['def']->first()->area_code) . ' ' . ucfirst(strtolower($jatimarea['def']->first()->area_name)) . ' sebesar ' . Utilities::getAbsoluteValue($jatimarea['def']->first()->INFMOM) . ' persen.')
+                    : (' Deflasi tertinggi terjadi di ' . Utilities::getAreaType($jatimarea['def']->first()->area_code) . ' ' .
+                        ucfirst(strtolower($jatimarea['def']->first()->area_name)) . ' sebesar ' . Utilities::getAbsoluteValue($jatimarea['def']->first()->INFMOM) .
+                        ' persen diikuti ' . Utilities::getSentenceFromArray($area_sentence['def']) . '.')) : '') .
+                ' (Lihat Tabel 3)';
+
+            $result['Indeks Harga Konsumen dan Inflasi Antarkota di Jawa Timur']['Jawa Timur'] = $sentence;
+
+            $sentence = 'Pada Juni 2022 dari seluruh kota IHK di
+            wilayah Pulau Jawa yang berjumlah 26 kota,
+            26 kota mengalami inflasi dan tidak ada kota
+            mengalami inflasi. Inflasi tertinggi terjadi di
+            Kota Semarang sebesar 0,93 persen dengan
+            IHK sebesar 110,97 dan terendah terjadi
+            di Kota DKI Jakarta  sebesar 0,32 persen
+            dengan IHK sebesar 109,67. (lihat Tabel 4).';
+            $result['Indeks Harga Konsumen dan Inflasi Antarkota di Jawa Timur']['Pulau Jawa'] = $sentence;
+
+            //Bab 3
+
             return $result;
         } else {
             $error = [];
             if (count($infcurrent) == 0) $error[] = 'Belum Upload Data Inflasi ' . $currentmonth->name . ' ' . $currentyear->name;
             if (count($infprev) == 0) $error[] = 'Belum Upload Data Inflasi ' . $prevmonth->name . ' ' . $prevyear->name;
+            if (count($infyearminus1) == 0) $error[] = 'Data Inflasi ' . $currentmonth->name . ' ' . $yearminus1->name . ' belum ada';
+            if (count($infyearminus2) == 0) $error[] = 'Data Inflasi ' . $currentmonth->name . ' ' . $yearminus2->name . ' belum ada';
+
             return redirect('/')->with('error-generate', $error);
         }
     }
