@@ -99,6 +99,24 @@
                                         </div>
                                         @enderror
                                     </div>
+                                    <div class="form-row mt-2">
+                                        <div class="col-md-8">
+                                            <label class="form-control-label" for="quantity">Upload Data Excel Inflasi Energi dan Makanan</label>
+                                        </div>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="col-md-8">
+                                            <div class="custom-file">
+                                                <input type="file" name="file-inf-food-energy" class="custom-file-input" id="file-inf-food-energy" lang="en" accept=".xlsx,.xls" onchange="onChange('file-inf-food-energy')">
+                                                <label class="custom-file-label" id="inputlabel-file-inf-food-energy" for="customFileLang">Pilih File</label>
+                                            </div>
+                                        </div>
+                                        @error('file-inf-food-energy')
+                                        <div class="error-feedback">
+                                            {{$message}}
+                                        </div>
+                                        @enderror
+                                    </div>
                                     <button class="btn btn-primary mt-3" id="sbmtbtn" type="submit">Upload</button>
                                 </div>
                             </div>

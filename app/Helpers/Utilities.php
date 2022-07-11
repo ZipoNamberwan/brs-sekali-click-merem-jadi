@@ -32,6 +32,8 @@ class Utilities
     }
     public static function getAreaType($code)
     {
+        if ($code == '3100') return '';
+
         if (substr($code, 2, 1) == '7') {
             return 'Kota';
         } else {

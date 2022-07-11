@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Imports\InflationDataImport;
 use App\Helpers\Utilities;
+use App\Imports\FoodAndEnergyInflationDataImport;
 use App\Imports\InflationDataByAreaImport;
 use App\Models\InflationData;
 use App\Models\InflationDataByArea;
@@ -45,6 +46,8 @@ class MainController extends Controller
         try {
             Excel::import(new InflationDataImport, $request->file('file-inf'));
             Excel::import(new InflationDataByAreaImport, $request->file('file-inf-area'));
+            Excel::import(new FoodAndEnergyInflationDataImport, $request->file('file-inf-food-energy'));
+
             return redirect('/upload')->with('success-upload', 'Upload Berhasil');
         } catch (Exception $e) {
             return redirect('/upload')->with('error-upload', 'Upload Gagal. Cek apakah file yang diupload sudah sesuai');
@@ -548,17 +551,80 @@ class MainController extends Controller
 
             $result['Indeks Harga Konsumen dan Inflasi Antarkota di Jawa Timur']['Jawa Timur'] = $sentence;
 
-            $sentence = 'Pada Juni 2022 dari seluruh kota IHK di
-            wilayah Pulau Jawa yang berjumlah 26 kota,
-            26 kota mengalami inflasi dan tidak ada kota
-            mengalami inflasi. Inflasi tertinggi terjadi di
-            Kota Semarang sebesar 0,93 persen dengan
-            IHK sebesar 110,97 dan terendah terjadi
-            di Kota DKI Jakarta  sebesar 0,32 persen
-            dengan IHK sebesar 109,67. (lihat Tabel 4).';
+
+            $infbyarea = InflationDataByArea::where([
+                'month_id' => $currentmonth->id,
+                'year_id' => $currentyear->id
+            ])->get();
+
+            $jawaarea = [
+                'inf' => collect(),
+                'def' => collect()
+            ];
+
+            foreach ($infbyarea as $area) {
+                if (substr($area->area_code, 0, 1) == '3') {
+                    if ($area->INFMOM > 0)
+                        $jawaarea['inf']->push($area);
+                    else if ($area->INFMOM < 0)
+                        $jawaarea['def']->push($area);
+                }
+            }
+
+            $jawaarea['inf'] = $jawaarea['inf']->sort(function ($a, $b) {
+                if ($a->INFMOM == $b->INFMOM) {
+                    return 0;
+                }
+                return ($a->INFMOM < $b->INFMOM) ? 1 : -1;
+            });
+
+            $jawaarea['def'] = $jawaarea['def']->sort(function ($a, $b) {
+                if ($a->INFMOM == $b->INFMOM) {
+                    return 0;
+                }
+                return ($a->INFMOM < $b->INFMOM) ? -1 : 1;
+            });
+
+            $sentence = 'Pada ' . $infcurrent->monthdetail->name . ' ' . $infcurrent->yeardetail->name .
+                ' dari seluruh kota IHK di wilayah Pulau Jawa yang berjumlah ' . (count($jawaarea['inf']) + count($jawaarea['def'])) . ', ' .
+                (count($jawaarea['inf']) > 0 ? ((count($jawaarea['inf']) == (count($jawaarea['inf']) + count($jawaarea['def'])) ? 'seluruh' : (count($jawaarea['inf']))) . ' kota mengalami inflasi') : '') .
+                (count($jawaarea['inf']) > 0 && count($jawaarea['def']) > 0 ? ' dan ' : '') .
+                (count($jawaarea['def']) > 0 ? ((count($jawaarea['def']) == (count($jawaarea['def']) + count($jawaarea['def'])) ? 'seluruh' : (count($jawaarea['def']))) . ' kota mengalami deflasi') : '') .
+                '.' .
+
+                (count($jawaarea['inf']) > 0 ? (count($jawaarea['inf']) == 1 ?
+                    (' Inflasi terjadi di ' . Utilities::getAreaType($jawaarea['inf']->first()->area_code) . ' ' . ucfirst(strtolower($jawaarea['inf']->first()->area_name)) . ' sebesar ' . Utilities::getAbsoluteValue($jawaarea['inf']->first()->INFMOM) . ' persen dengan IHK sebesar ' . $jawaarea['inf']->first()->IHK . '. ')
+                    : (' Inflasi tertinggi terjadi di ' . Utilities::getAreaType($jawaarea['inf']->first()->area_code) . ' ' .
+                        ucfirst(strtolower($jawaarea['inf']->first()->area_name)) . ' sebesar ' . Utilities::getAbsoluteValue($jawaarea['inf']->first()->INFMOM) .
+                        ' persen dengan IHK sebesar ' . $jawaarea['inf']->first()->IHK .
+
+                        ' dan inflasi terendah terjadi di ' . Utilities::getAreaType($jawaarea['inf']->last()->area_code) . ' ' .
+                        ucfirst(strtolower($jawaarea['inf']->last()->area_name)) . ' sebesar ' . Utilities::getAbsoluteValue($jawaarea['inf']->last()->INFMOM) .
+                        ' persen dengan IHK sebesar ' . $jawaarea['inf']->last()->IHK . '.')) : '') .
+
+                (count($jawaarea['def']) > 0 ? (count($jawaarea['def']) == 1 ?
+                    (' Deflasi terjadi di ' . Utilities::getAreaType($jawaarea['def']->first()->area_code) . ' ' . ucfirst(strtolower($jawaarea['def']->first()->area_name)) . ' sebesar ' . Utilities::getAbsoluteValue($jawaarea['def']->first()->INFMOM) . ' persen dengan IHK sebesar ' . $jawaarea['def']->first()->IHK . '. ')
+                    : (' Deflasi tertinggi terjadi di ' . Utilities::getAreaType($jawaarea['def']->first()->area_code) . ' ' .
+                        ucfirst(strtolower($jawaarea['def']->first()->area_name)) . ' sebesar ' . Utilities::getAbsoluteValue($jawaarea['def']->first()->INFMOM) .
+                        ' persen dengan IHK sebesar ' . $jawaarea['def']->first()->IHK .
+
+                        ' dan deflasi terendah terjadi di ' . Utilities::getAreaType($jawaarea['def']->last()->area_code) . ' ' .
+                        ucfirst(strtolower($jawaarea['def']->last()->area_name)) . ' sebesar ' . Utilities::getAbsoluteValue($jawaarea['def']->last()->INFMOM) .
+                        ' persen dengan IHK sebesar ' . $jawaarea['def']->last()->IHK . '.')) : '');
+
             $result['Indeks Harga Konsumen dan Inflasi Antarkota di Jawa Timur']['Pulau Jawa'] = $sentence;
 
             //Bab 3
+
+            //Bab 4
+            $sentence = '';
+            $result['Inflasi Komponen Energi'] = $sentence;
+            //Bab 4
+
+            //Bab 5
+            $sentence = '';
+            $result['Inflasi Bahan Makanan'] = $sentence;
+            //Bab 5
 
             return $result;
         } else {
