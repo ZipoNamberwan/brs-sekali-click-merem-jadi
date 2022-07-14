@@ -40,4 +40,18 @@ class Utilities
             return 'Kabupaten';
         }
     }
+    public static function getInfTrendSentence($inf)
+    {
+        if ($inf > 0)
+            return 'mengalami kenaikan';
+        else if ($inf < 0)
+            return 'mengalami penurunan';
+        else
+            return 'tidak mengalami perubahan';
+    }
+    public static function isEnergyFoodInfStill($value)
+    {
+        if ($value == 0) return true;
+        return false;
+    }
 }

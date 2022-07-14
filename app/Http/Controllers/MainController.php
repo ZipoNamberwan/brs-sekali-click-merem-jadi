@@ -6,6 +6,8 @@ use App\Imports\InflationDataImport;
 use App\Helpers\Utilities;
 use App\Imports\FoodAndEnergyInflationDataImport;
 use App\Imports\InflationDataByAreaImport;
+use App\Models\EnergyInflationData;
+use App\Models\FoodInflationData;
 use App\Models\InflationData;
 use App\Models\InflationDataByArea;
 use App\Models\Month;
@@ -13,6 +15,8 @@ use App\Models\Year;
 use Exception;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class MainController extends Controller
 {
@@ -610,21 +614,362 @@ class MainController extends Controller
 
                         ' dan deflasi terendah terjadi di ' . Utilities::getAreaType($jawaarea['def']->last()->area_code) . ' ' .
                         ucfirst(strtolower($jawaarea['def']->last()->area_name)) . ' sebesar ' . Utilities::getAbsoluteValue($jawaarea['def']->last()->INFMOM) .
-                        ' persen dengan IHK sebesar ' . $jawaarea['def']->last()->IHK . '.')) : '');
+                        ' persen dengan IHK sebesar ' . $jawaarea['def']->last()->IHK . '.')) : '') . ' (Lihat tabel 4).';
 
             $result['Indeks Harga Konsumen dan Inflasi Antarkota di Jawa Timur']['Pulau Jawa'] = $sentence;
 
             //Bab 3
 
             //Bab 4
-            $sentence = '';
+            $energyinflation = EnergyInflationData::where([
+                'month_id' => $currentmonth->id,
+                'year_id' => $currentyear->id
+            ])->first();
+            $prevenergyinflation = EnergyInflationData::where([
+                'month_id' => $prevmonth->id,
+                'year_id' => $prevyear->id
+            ])->first();
+
+            $first_sentence = 'Komponen energi pada ' . $energyinflation->monthdetail->name . ' ' . $energyinflation->yeardetail->name;
+            if (Utilities::isEnergyFoodInfStill($energyinflation->INFMOM)) {
+                $first_sentence = $first_sentence . ' tidak mengalami perubahan indeks dibandingkan dengan bulan sebelumnya, yaitu ' . $energyinflation->IHK . '.';
+            } else {
+                $first_sentence = $first_sentence . ' mengalami ' . Utilities::getInfTypeString($energyinflation->INFMOM) .
+                    ' sebesar ' . Utilities::getAbsoluteValue($energyinflation->INFMOM) .
+                    ' persen atau mengalami perubahan indeks dari ' . $prevenergyinflation->IHK . ' pada ' . $prevenergyinflation->monthdetail->name . ' ' .
+                    $prevenergyinflation->yeardetail->name . ' menjadi ' . $energyinflation->IHK . ' pada ' . $energyinflation->monthdetail->name . ' ' .
+                    $energyinflation->yeardetail->name . '.';
+            }
+            $last_sentence = '';
+            if ($energyinflation->ANDILMOM == 0) {
+                $last_sentence = 'Komponen energi pada ' . $energyinflation->monthdetail->name . ' ' . $energyinflation->yeardetail->name . ' tidak memberikan andil/sumbangan terhadap inflasi nasional.';
+            } else {
+                $last_sentence = 'Komponen energi pada ' . $energyinflation->monthdetail->name . ' ' . $energyinflation->yeardetail->name . ' memberikan andil/sumbangan terhadap inflasi nasional sebesar ' . Utilities::getAbsoluteValue($energyinflation->ANDILMOM) . ' persen.';
+            }
+            $sentence =
+                $first_sentence . ' ' . ucfirst(Utilities::getInfTypeString($energyinflation->INFYTD)) .
+                ' komponen energi untuk tahun kalender ' . $energyinflation->monthdetail->name . ' ' . $energyinflation->yeardetail->name . ' sebesar ' . $energyinflation->INFYTD .
+                ' persen dan ' . Utilities::getInfTypeString($energyinflation->INFYTD) . ' tahun ke tahun (' . $energyinflation->monthdetail->name . ' ' . $energyinflation->yeardetail->name .
+                ' terhadap ' . $energyinflation->monthdetail->name . ' ' . $yearminus1->name . ') sebesar ' . Utilities::getAbsoluteValue($energyinflation->INFYOY) . ' persen. ' .
+                $last_sentence . ' (lihat Tabel 6)';
+
             $result['Inflasi Komponen Energi'] = $sentence;
             //Bab 4
 
             //Bab 5
-            $sentence = '';
+            $foodinflation = FoodInflationData::where([
+                'month_id' => $currentmonth->id,
+                'year_id' => $currentyear->id
+            ])->first();
+            $prevfoodinflation = FoodInflationData::where([
+                'month_id' => $prevmonth->id,
+                'year_id' => $prevyear->id
+            ])->first();
+            $first_sentence = 'Bahan makanan pada ' . $foodinflation->monthdetail->name . ' ' . $foodinflation->yeardetail->name;
+            if (Utilities::isEnergyFoodInfStill($foodinflation->INFMOM)) {
+                $first_sentence = $first_sentence . ' tidak mengalami perubahan indeks dibandingkan dengan bulan sebelumnya, yaitu ' . $foodinflation->IHK . '.';
+            } else {
+                $first_sentence = $first_sentence . ' mengalami ' . Utilities::getInfTypeString($foodinflation->INFMOM) .
+                    ' sebesar ' . Utilities::getAbsoluteValue($foodinflation->INFMOM) .
+                    ' persen atau mengalami perubahan indeks dari ' . $prevfoodinflation->IHK . ' pada ' . $prevfoodinflation->monthdetail->name . ' ' .
+                    $prevfoodinflation->yeardetail->name . ' menjadi ' . $foodinflation->IHK . ' pada ' . $foodinflation->monthdetail->name . ' ' .
+                    $foodinflation->yeardetail->name . '.';
+            }
+            $last_sentence = '';
+            if ($foodinflation->ANDILMOM == 0) {
+                $last_sentence = 'Bahan makanan pada ' . $foodinflation->monthdetail->name . ' ' . $foodinflation->yeardetail->name . ' tidak memberikan andil/sumbangan terhadap inflasi nasional.';
+            } else {
+                $last_sentence = 'Bahan makanan pada ' . $foodinflation->monthdetail->name . ' ' . $foodinflation->yeardetail->name . ' memberikan andil/sumbangan terhadap inflasi nasional sebesar ' . Utilities::getAbsoluteValue($foodinflation->ANDILMOM) . ' persen.';
+            }
+            $sentence = $first_sentence . ' ' . ucfirst(Utilities::getInfTypeString($foodinflation->INFYTD)) .
+                ' bahan makanan untuk tahun kalender ' . $foodinflation->monthdetail->name . ' ' . $foodinflation->yeardetail->name . ' sebesar ' . $foodinflation->INFYTD .
+                ' persen dan ' . Utilities::getInfTypeString($foodinflation->INFYTD) . ' tahun ke tahun (' . $foodinflation->monthdetail->name . ' ' . $foodinflation->yeardetail->name .
+                ' terhadap ' . $foodinflation->monthdetail->name . ' ' . $yearminus1->name . ') sebesar ' . Utilities::getAbsoluteValue($foodinflation->INFYOY) . ' persen. ' .
+                $last_sentence . ' (lihat Tabel 6)';
+
             $result['Inflasi Bahan Makanan'] = $sentence;
             //Bab 5
+
+            //Excel
+
+            //Tabel 1
+
+            $infcurrent = InflationData::where('month_id', $currentmonth->id)
+                ->where('year_id', $currentyear->id)
+                ->where(function ($query) {
+                    $query->where('flag', '=', 1);
+                    $query->orWhere('flag', '=', 0);
+                })->get();
+
+            $infprev = InflationData::where('month_id', $prevmonth->id)
+                ->where('year_id', $prevyear->id)
+                ->where(function ($query) {
+                    $query->where('flag', '=', 1);
+                    $query->orWhere('flag', '=', 0);
+                })->get();
+
+            $infyearminus1 = InflationData::where('month_id', $currentmonth->id)
+                ->where('year_id', $yearminus1->id)
+                ->where(function ($query) {
+                    $query->where('flag', '=', 1);
+                    $query->orWhere('flag', '=', 0);
+                })->get();
+
+            $spreadsheet = new Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheet->setTitle('Tabel 1');
+
+            $sheet->getCell('A1')
+                ->setValue('IHK dan Tingkat Inflasi Kota Probolinggo ' . $currentmonth->name . ' ' . $currentyear->name .
+                    ', Tahun Kalender ' . $currentmonth->name . ' ' . $currentyear->name .
+                    ', dan Tahun ke Tahun ' . $currentmonth->name . ' ' . $currentyear->name .
+                    ' Menurut Kelompok Pengeluaran (2018=100)');
+
+            $sheet->getCell('A3')
+                ->setValue('Kelompok Pengeluaran');
+            $sheet->getCell('B3')
+                ->setValue('IHK ' . $currentmonth->name . ' ' . $yearminus1->name);
+            $sheet->getCell('C3')
+                ->setValue('IHK ' . $prevmonth->name . ' ' . $prevyear->name);
+            $sheet->getCell('D3')
+                ->setValue('IHK ' . $currentmonth->name . ' ' . $currentyear->name);
+            $sheet->getCell('E3')
+                ->setValue('Tingkat Inflasi ' . $currentmonth->name . ' ' . $currentyear->name . ' (%)');
+            $sheet->getCell('F3')
+                ->setValue('Tingkat Inflasi Tahun Kalender ' . $currentmonth->name . ' ' . $currentyear->name . ' (%)');
+            $sheet->getCell('G3')
+                ->setValue('Tingkat Inflasi Tahun ke Tahun ' . $currentmonth->name . ' ' . $currentyear->name . ' (%)');
+            $sheet->getCell('H3')
+                ->setValue('Andil Inflasi ' . $currentmonth->name . ' ' . $currentyear->name . ' (%)');
+
+            $i = 4;
+            for ($j = 0; $j < count($infcurrent); $j++) {
+                $sheet->getCell('A' . $i)
+                    ->setValue(ucwords(strtolower($infcurrent[$j]->item_name)));
+                if (count($infyearminus1) == 12)
+                    $sheet->getCell('B' . $i)
+                        ->setValue($infyearminus1[$j]->IHK);
+                else $sheet->getCell('B' . $i)
+                    ->setValue('Data Belum Diupload');
+                $sheet->getCell('C' . $i)
+                    ->setValue($infprev[$j]->IHK);
+                $sheet->getCell('D' . $i)
+                    ->setValue($infcurrent[$j]->IHK);
+                $sheet->getCell('E' . $i)
+                    ->setValue($infcurrent[$j]->INFMOM);
+                $sheet->getCell('F' . $i)
+                    ->setValue($infcurrent[$j]->INFYTD);
+                $sheet->getCell('G' . $i)
+                    ->setValue($infcurrent[$j]->INFYOY);
+                $sheet->getCell('H' . $i)
+                    ->setValue($infcurrent[$j]->ANDILMOM);
+
+                $i++;
+            }
+
+            //Tabel 1
+
+            //Tabel 2
+
+            $infcurrent = InflationData::where('month_id', $currentmonth->id)
+                ->where('year_id', $currentyear->id)
+                ->where('flag', 0)->first();
+
+            $infyearminus1 = InflationData::where('month_id', $currentmonth->id)
+                ->where('year_id', $yearminus1->id)
+                ->where('flag', 0)->first();
+
+            $infyearminus2 = InflationData::where('month_id', $currentmonth->id)
+                ->where('year_id', $yearminus2->id)
+                ->where('flag', 0)->first();
+
+            $infarray = collect();
+            $infarray->push($infyearminus2);
+            $infarray->push($infyearminus1);
+            $infarray->push($infcurrent);
+
+            $spreadsheet->createSheet();
+            $spreadsheet->setActiveSheetIndex(1);
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheet->setTitle('Tabel 2');
+
+            $sheet->getCell('A1')
+                ->setValue('Tingkat Inflasi Bulanan, Tahun Kalender, dan Tahun ke Tahun Kota Probolinggo ' . $yearminus2->name . '-' . $currentyear->name . ' (Persen)');
+
+            $sheet->getCell('A3')
+                ->setValue('Tingkat Inflasi');
+            $sheet->getCell('B3')
+                ->setValue($yearminus2->name);
+            $sheet->getCell('C3')
+                ->setValue($yearminus1->name);
+            $sheet->getCell('D3')
+                ->setValue($currentyear->name);
+
+            $sheet->getCell('A4')
+                ->setValue($currentmonth->name);
+            $sheet->getCell('A5')
+                ->setValue('Tahun Kalender (Januari-' . $currentmonth->name . ')');
+            $sheet->getCell('A6')
+                ->setValue('Tahun ke Tahun (' . $currentmonth->name . ' tahun n terhadap ' . $currentmonth->name . ' tahun n-1)');
+
+            $j = 0;
+            foreach (range('B', 'D') as $v) {
+                $sheet->getCell($v . '4')
+                    ->setValue($infarray[$j]->INFMOM);
+                $sheet->getCell($v . '5')
+                    ->setValue($infarray[$j]->INFYTD);
+                $sheet->getCell($v . '6')
+                    ->setValue($infarray[$j]->INFYOY);
+                $j++;
+            }
+            //Tabel 2
+
+            //Tabel 3
+
+            $infbyarea = InflationDataByArea::where([
+                'month_id' => $currentmonth->id,
+                'year_id' => $currentyear->id,
+            ])->where('area_code', 'LIKE', '35%')->get();
+
+            $spreadsheet->createSheet();
+            $spreadsheet->setActiveSheetIndex(2);
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheet->setTitle('Tabel 3');
+
+            $sheet->getCell('A1')
+                ->setValue('Perbandingan Indeks dan Tingkat Inflasi ' . $currentmonth->name . ' ' . $currentyear->name . ' Kota-Kota di Jawa Timur dengan Jawa Timur (2018=100)');
+            $sheet->getCell('A3')
+                ->setValue('Kota');
+            $sheet->getCell('B3')
+                ->setValue('IHK');
+            $sheet->getCell('C3')
+                ->setValue('Tingkat Inflasi (%)');
+
+            $j = 4;
+            foreach ($infbyarea as $inf) {
+                $sheet->getCell('A' . $j)
+                    ->setValue(ucwords(strtolower($inf->area_name)));
+                $sheet->getCell('B' . $j)
+                    ->setValue($inf->IHK);
+                $sheet->getCell('C' . $j)
+                    ->setValue($inf->INFMOM);
+                $j++;
+            }
+            //Tabel 3
+
+            //Tabel 4
+            $infbyarea = InflationDataByArea::where([
+                'month_id' => $currentmonth->id,
+                'year_id' => $currentyear->id,
+            ])->where('area_code', 'LIKE', '3%')->get();
+
+            $spreadsheet->createSheet();
+            $spreadsheet->setActiveSheetIndex(3);
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheet->setTitle('Tabel 4');
+
+            $sheet->getCell('A1')
+                ->setValue('Perbandingan Indeks dan Tingkat Inflasi ' . $currentmonth->name . ' ' . $currentyear->name . ' Kota-Kota di Pulau Jawa dengan Nasional (2018=100)');
+            $sheet->getCell('A3')
+                ->setValue('Kota');
+            $sheet->getCell('B3')
+                ->setValue('IHK');
+            $sheet->getCell('C3')
+                ->setValue('Tingkat Inflasi (%)');
+
+            $j = 4;
+            foreach ($infbyarea as $inf) {
+                $sheet->getCell('A' . $j)
+                    ->setValue(ucwords(strtolower($inf->area_name)));
+                $sheet->getCell('B' . $j)
+                    ->setValue($inf->IHK);
+                $sheet->getCell('C' . $j)
+                    ->setValue($inf->INFMOM);
+                $j++;
+            }
+            //Tabel 4
+
+            //Tabel 5
+            $currentenergyinf = EnergyInflationData::where([
+                'month_id' => $currentmonth->id,
+                'year_id' => $currentyear->id,
+            ])->first();
+            $currentenergyprev = EnergyInflationData::where([
+                'month_id' => $prevmonth->id,
+                'year_id' => $prevyear->id,
+            ])->first();
+
+            $currentfoodinf = FoodInflationData::where([
+                'month_id' => $currentmonth->id,
+                'year_id' => $currentyear->id,
+            ])->first();
+            $currentfoodprev = FoodInflationData::where([
+                'month_id' => $prevmonth->id,
+                'year_id' => $prevyear->id,
+            ])->first();
+
+            $spreadsheet->createSheet();
+            $spreadsheet->setActiveSheetIndex(4);
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheet->setTitle('Tabel 5');
+
+            $sheet->getCell('A1')
+                ->setValue('Tingkat Inflasi ' . $currentmonth->name . ' ' . $currentyear->name . ', Tahun Kalender ' . $currentyear->name . ', dan Tahun ke Tahun Kota Probolinggo Menurut Kelompok Komponen Energi dan Bahan Makanan');
+            $sheet->getCell('A3')
+                ->setValue('Komponen');
+            $sheet->getCell('B3')
+                ->setValue('IHK ' . $prevmonth->name . ' ' . $prevyear->name);
+            $sheet->getCell('C3')
+                ->setValue('IHK ' . $currentmonth->name . ' ' . $currentyear->name);
+            $sheet->getCell('C3')
+                ->setValue('Tingkat Inflasi (%)');
+            $sheet->getCell('D3')
+                ->setValue('Tingkat Inflasi ' . $currentmonth->name . ' ' . $currentyear->name . ' (%)');
+            $sheet->getCell('E3')
+                ->setValue('Tingkat Inflasi Tahun Kalender ' . $currentmonth->name . ' ' . $currentyear->name . ' (%)');
+            $sheet->getCell('F3')
+                ->setValue('Tingkat Inflasi Tahun ke Tahun ' . $currentmonth->name . ' ' . $currentyear->name . ' (%)');
+            $sheet->getCell('G3')
+                ->setValue('Andil Inflasi ' . $currentmonth->name . ' ' . $currentyear->name . ' (%)');
+
+
+            $sheet->getCell('A4')
+                ->setValue('Energi');
+            $sheet->getCell('A5')
+                ->setValue('Bahan Makanan');
+            $sheet->getCell('B4')
+                ->setValue($prevenergyinflation->IHK);
+            $sheet->getCell('B5')
+                ->setValue($prevfoodinflation->IHK);
+            $sheet->getCell('C4')
+                ->setValue($currentenergyinf->IHK);
+            $sheet->getCell('C5')
+                ->setValue($currentfoodinf->IHK);
+            $sheet->getCell('D4')
+                ->setValue($currentenergyinf->INFMOM);
+            $sheet->getCell('D5')
+                ->setValue($currentfoodinf->INFMOM);
+            $sheet->getCell('E4')
+                ->setValue($currentenergyinf->INFYTD);
+            $sheet->getCell('E5')
+                ->setValue($currentfoodinf->INFYTD);
+            $sheet->getCell('F4')
+                ->setValue($currentenergyinf->INFYOY);
+            $sheet->getCell('F5')
+                ->setValue($currentfoodinf->INFYOY);
+            $sheet->getCell('G4')
+                ->setValue($currentenergyinf->ANDILMOM);
+            $sheet->getCell('G5')
+                ->setValue($currentfoodinf->ANDILMOM);
+
+            //Tabel 5
+
+            header('Content-Type: application/vnd.ms-excel');
+            header('Content-Disposition: attachment;filename="Tabel Inflasi ' . $currentmonth->name . ' ' . $currentyear->name . '.xls"');
+            header('Cache-Control: max-age=0');
+
+            $writer = \PhpOffice\PhpSpreadsheet\IOFactory::createWriter($spreadsheet, 'Xls');
+            $writer->save('php://output');
 
             return $result;
         } else {
