@@ -19,10 +19,6 @@ class Utilities
         if ($value < 0) return false;
         return true;
     }
-    public static function getAbsoluteValue($value)
-    {
-        return abs($value);
-    }
     public static function getSentenceFromArray($array, $separator = ', ', $lastseparator = ' dan ')
     {
         $last  = array_slice($array, -1);
@@ -53,5 +49,9 @@ class Utilities
     {
         if ($value == 0) return true;
         return false;
+    }
+    public static function getFormattedNumber($value, $dec = 2, $isAbsolute = true)
+    {
+        return number_format((float)($isAbsolute ? abs($value) : $value), $dec, ',', ' ');
     }
 }

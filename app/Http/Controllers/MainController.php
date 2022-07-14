@@ -16,7 +16,6 @@ use Exception;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class MainController extends Controller
 {
@@ -127,9 +126,9 @@ class MainController extends Controller
                 . $infcurrent->monthdetail->name . ' ' . $infcurrent->yeardetail->name] =
                 $infcurrent->monthdetail->name . ' ' . $infcurrent->yeardetail->name .
                 ' ' . Utilities::getInfTypeString($infcurrent->INFMOM) . ' bulanan Kota Probolinggo sebesar ' .
-                Utilities::getAbsoluteValue($infcurrent->INFMOM) . ' persen, ' . Utilities::getInfTypeString($infcurrent->INFYTD) . ' tahun kalender sebesar ' .
-                Utilities::getAbsoluteValue($infcurrent->INFYTD) . ' persen dan ' . Utilities::getInfTypeString($infcurrent->INFYOY) . ' tahunan sebesar ' .
-                Utilities::getAbsoluteValue($infcurrent->INFYOY) . ' persen.';
+                Utilities::getFormattedNumber($infcurrent->INFMOM) . ' persen, ' . Utilities::getInfTypeString($infcurrent->INFYTD) . ' tahun kalender sebesar ' .
+                Utilities::getFormattedNumber($infcurrent->INFYTD) . ' persen dan ' . Utilities::getInfTypeString($infcurrent->INFYOY) . ' tahunan sebesar ' .
+                Utilities::getFormattedNumber($infcurrent->INFYOY) . ' persen.';
             //Judul
 
             //Intro
@@ -174,8 +173,8 @@ class MainController extends Controller
 
             $result['Intro']['first'] = 'Pada ' . $infcurrent->monthdetail->name . ' ' . $infcurrent->yeardetail->name .
                 ' Kota Probolinggo terjadi ' . Utilities::getInfTypeString($infcurrent->INFMOM) .
-                ' sebesar ' . Utilities::getAbsoluteValue($infcurrent->INFMOM) .
-                ' persen dengan Indeks Harga Konsumen (IHK) sebesar ' . $infcurrent->IHK .
+                ' sebesar ' . Utilities::getFormattedNumber($infcurrent->INFMOM) .
+                ' persen dengan Indeks Harga Konsumen (IHK) sebesar ' . Utilities::getFormattedNumber($infcurrent->IHK) .
 
                 '. Dari ' . (count($jatimarea['inf']) + count($jatimarea['def'])) . ' kota IHK di Jawa Timur, ' .
                 (count($jatimarea['inf']) > 0 ? ((count($jatimarea['inf']) == (count($jatimarea['inf']) + count($jatimarea['def'])) ? 'seluruh' : (count($jatimarea['inf']))) . ' kota mengalami inflasi') : '') .
@@ -184,31 +183,31 @@ class MainController extends Controller
                 '.' .
 
                 (count($jatimarea['inf']) > 0 ? (count($jatimarea['inf']) == 1 ?
-                    (' Inflasi terjadi di ' . Utilities::getAreaType($jatimarea['inf']->first()->area_code) . ' ' . ucfirst(strtolower($jatimarea['inf']->first()->area_name)) . ' sebesar ' . Utilities::getAbsoluteValue($jatimarea['inf']->first()->INFMOM) . ' persen dengan IHK sebesar ' . $jatimarea['inf']->first()->IHK . '. ')
+                    (' Inflasi terjadi di ' . Utilities::getAreaType($jatimarea['inf']->first()->area_code) . ' ' . ucfirst(strtolower($jatimarea['inf']->first()->area_name)) . ' sebesar ' . Utilities::getFormattedNumber($jatimarea['inf']->first()->INFMOM) . ' persen dengan IHK sebesar ' . Utilities::getFormattedNumber($jatimarea['inf']->first()->IHK) . '. ')
                     : (' Inflasi tertinggi terjadi di ' . Utilities::getAreaType($jatimarea['inf']->first()->area_code) . ' ' .
-                        ucfirst(strtolower($jatimarea['inf']->first()->area_name)) . ' sebesar ' . Utilities::getAbsoluteValue($jatimarea['inf']->first()->INFMOM) .
-                        ' persen dengan IHK sebesar ' . $jatimarea['inf']->first()->IHK .
+                        ucfirst(strtolower($jatimarea['inf']->first()->area_name)) . ' sebesar ' . Utilities::getFormattedNumber($jatimarea['inf']->first()->INFMOM) .
+                        ' persen dengan IHK sebesar ' . Utilities::getFormattedNumber($jatimarea['inf']->first()->IHK) .
 
                         ' dan inflasi terendah terjadi di ' . Utilities::getAreaType($jatimarea['inf']->last()->area_code) . ' ' .
-                        ucfirst(strtolower($jatimarea['inf']->last()->area_name)) . ' sebesar ' . Utilities::getAbsoluteValue($jatimarea['inf']->last()->INFMOM) .
-                        ' persen dengan IHK sebesar ' . $jatimarea['inf']->last()->IHK . '.')) : '') .
+                        ucfirst(strtolower($jatimarea['inf']->last()->area_name)) . ' sebesar ' . Utilities::getFormattedNumber($jatimarea['inf']->last()->INFMOM) .
+                        ' persen dengan IHK sebesar ' . Utilities::getFormattedNumber($jatimarea['inf']->last()->IHK) . '.')) : '') .
 
                 (count($jatimarea['def']) > 0 ? (count($jatimarea['def']) == 1 ?
-                    (' Deflasi terjadi di ' . Utilities::getAreaType($jatimarea['def']->first()->area_code) . ' ' . ucfirst(strtolower($jatimarea['def']->first()->area_name)) . ' sebesar ' . Utilities::getAbsoluteValue($jatimarea['def']->first()->INFMOM) . ' persen dengan IHK sebesar ' . $jatimarea['def']->first()->IHK . '. ')
+                    (' Deflasi terjadi di ' . Utilities::getAreaType($jatimarea['def']->first()->area_code) . ' ' . ucfirst(strtolower($jatimarea['def']->first()->area_name)) . ' sebesar ' . Utilities::getFormattedNumber($jatimarea['def']->first()->INFMOM) . ' persen dengan IHK sebesar ' . Utilities::getFormattedNumber($jatimarea['def']->first()->IHK) . '. ')
                     : (' Deflasi tertinggi terjadi di ' . Utilities::getAreaType($jatimarea['def']->first()->area_code) . ' ' .
-                        ucfirst(strtolower($jatimarea['def']->first()->area_name)) . ' sebesar ' . Utilities::getAbsoluteValue($jatimarea['def']->first()->INFMOM) .
-                        ' persen dengan IHK sebesar ' . $jatimarea['def']->first()->IHK .
+                        ucfirst(strtolower($jatimarea['def']->first()->area_name)) . ' sebesar ' . Utilities::getFormattedNumber($jatimarea['def']->first()->INFMOM) .
+                        ' persen dengan IHK sebesar ' . Utilities::getFormattedNumber($jatimarea['def']->first()->IHK) .
 
                         ' dan deflasi terendah terjadi di ' . Utilities::getAreaType($jatimarea['def']->last()->area_code) . ' ' .
-                        ucfirst(strtolower($jatimarea['def']->last()->area_name)) . ' sebesar ' . Utilities::getAbsoluteValue($jatimarea['def']->last()->INFMOM) .
-                        ' persen dengan IHK sebesar ' . $jatimarea['def']->last()->IHK . '.')) : '');
+                        ucfirst(strtolower($jatimarea['def']->last()->area_name)) . ' sebesar ' . Utilities::getFormattedNumber($jatimarea['def']->last()->INFMOM) .
+                        ' persen dengan IHK sebesar ' . Utilities::getFormattedNumber($jatimarea['def']->last()->IHK) . '.')) : '');
 
             $result['Intro']['third'] = 'Tingkat ' . Utilities::getInfTypeString($infcurrent->INFYTD) . ' tahun kalender '
                 . $infcurrent->monthdetail->name . ' ' . $infcurrent->yeardetail->name .
-                ' sebesar ' . Utilities::getAbsoluteValue($infcurrent->INFYTD) .
+                ' sebesar ' . Utilities::getFormattedNumber($infcurrent->INFYTD) .
                 ' persen dan tingkat ' . Utilities::getInfTypeString($infcurrent->INFYOY) . ' tahun ke tahun (' . $infcurrent->monthdetail->name . ' ' . $infcurrent->yeardetail->name .
                 ' terhadap ' . $infcurrent->monthdetail->name . ' ' . $yearminus1->name . ') sebesar ' .
-                Utilities::getAbsoluteValue($infcurrent->INFYOY) . ' persen.';
+                Utilities::getFormattedNumber($infcurrent->INFYOY) . ' persen.';
             //Intro
 
             $infcurrent = InflationData::where([
@@ -237,13 +236,13 @@ class MainController extends Controller
                 '. Berdasarkan hasil pemantauan BPS di pasar tradisional dan pasar modern di Kota Probolinggo yaitu: Pasar Baru; Pasar Wonoasih; dan GM Hypermart, pada ' .
                 $infcurrent->monthdetail->name . ' ' . $infcurrent->yeardetail->name . ' terjadi ' .
                 Utilities::getInfTypeString($infcurrent->INFMOM) . ' sebesar ' .
-                Utilities::getAbsoluteValue($infcurrent->INFMOM) . ' persen, atau terjadi ' .
+                Utilities::getFormattedNumber($infcurrent->INFMOM) . ' persen, atau terjadi ' .
                 Utilities::getInfTrendString($infcurrent->INFMOM) . ' Indeks Harga Konsumen (IHK) dari ' .
-                $infprev->IHK . ' pada ' . $infprev->monthdetail->name . ' ' . $infprev->yeardetail->name . ' menjadi ' .
-                $infcurrent->IHK . ' pada ' . $infcurrent->monthdetail->name . ' ' . $infcurrent->yeardetail->name .
-                '. Tingkat ' . Utilities::getInfTypeString($infcurrent->INFYTD) . ' tahun kalender ' . $infcurrent->monthdetail->name . ' ' . $infcurrent->yeardetail->name . ' sebesar ' . Utilities::getAbsoluteValue($infcurrent->INFYTD) .
+                Utilities::getFormattedNumber($infprev->IHK) . ' pada ' . $infprev->monthdetail->name . ' ' . $infprev->yeardetail->name . ' menjadi ' .
+                Utilities::getFormattedNumber($infcurrent->IHK) . ' pada ' . $infcurrent->monthdetail->name . ' ' . $infcurrent->yeardetail->name .
+                '. Tingkat ' . Utilities::getInfTypeString($infcurrent->INFYTD) . ' tahun kalender ' . $infcurrent->monthdetail->name . ' ' . $infcurrent->yeardetail->name . ' sebesar ' . Utilities::getFormattedNumber($infcurrent->INFYTD) .
                 ' persen dan tingkat ' . Utilities::getInfTypeString($infcurrent->INFYOY) . ' tahun ke tahun (' . $infcurrent->monthdetail->name . ' ' . $infcurrent->yeardetail->name .
-                ' terhadap ' . $infcurrent->monthdetail->name  . ' ' . $yearminus1->name . ') sebesar ' . Utilities::getAbsoluteValue($infcurrent->INFYOY) . ' persen.';
+                ' terhadap ' . $infcurrent->monthdetail->name  . ' ' . $yearminus1->name . ') sebesar ' . Utilities::getFormattedNumber($infcurrent->INFYOY) . ' persen.';
 
             $result['Indeks Harga Konsumen/Inflasi Menurut Kelompok']['first'] = $first_pg;
 
@@ -282,7 +281,7 @@ class MainController extends Controller
                 $s = [];
                 foreach ($value as $v) {
                     if ($key != 'still')
-                        $s[] = 'kelompok ' . strtolower($v->item_name) . ' sebesar ' . Utilities::getAbsoluteValue($v->INFMOM) . ' persen';
+                        $s[] = 'kelompok ' . strtolower($v->item_name) . ' sebesar ' . Utilities::getFormattedNumber($v->INFMOM) . ' persen';
                     else $s[] = 'kelompok ' . strtolower($v->item_name);
                 }
                 $sentence_group[$key] = Utilities::getSentenceFromArray($s, '; ');
@@ -318,7 +317,7 @@ class MainController extends Controller
                 $s = [];
                 foreach ($value as $v) {
                     if ($key != 'still')
-                        $s[] = 'kelompok ' . strtolower($v->item_name) . ' sebesar ' . Utilities::getAbsoluteValue($v->ANDILMOM) . ' persen';
+                        $s[] = 'kelompok ' . strtolower($v->item_name) . ' sebesar ' . Utilities::getFormattedNumber($v->ANDILMOM, 4) . ' persen';
                     else $s[] = 'kelompok ' . strtolower($v->item_name);
                 }
                 $sentence_group[$key] = Utilities::getSentenceFromArray($s, '; ');
@@ -370,9 +369,9 @@ class MainController extends Controller
 
                     $paragraph_array['first'] = 'Kelompok ini pada ' . $k->monthdetail->name . ' ' . $k->yeardetail->name .
                         ' mengalami ' . Utilities::getInfTypeString($k->INFMOM) . ' sebesar ' .
-                        Utilities::getAbsoluteValue($k->INFMOM) . ' persen atau terjadi ' . Utilities::getInfTrendString($k->INFMOM) .
-                        ' indeks dari ' . $infprev->IHK . ' pada ' . $infprev->monthdetail->name . ' ' . $infprev->yeardetail->name .
-                        ' menjadi ' . $k->IHK . ' pada ' . $k->monthdetail->name . ' ' . $k->yeardetail->name;
+                        Utilities::getFormattedNumber($k->INFMOM) . ' persen atau terjadi ' . Utilities::getInfTrendString($k->INFMOM) .
+                        ' indeks dari ' . Utilities::getFormattedNumber($infprev->IHK) . ' pada ' . $infprev->monthdetail->name . ' ' . $infprev->yeardetail->name .
+                        ' menjadi ' . Utilities::getFormattedNumber($k->IHK) . ' pada ' . $k->monthdetail->name . ' ' . $k->yeardetail->name;
 
                     //paragraf pertama
 
@@ -400,7 +399,7 @@ class MainController extends Controller
                     foreach ($subkelompok_group as $key => $value) {
                         $s = [];
                         foreach ($value as $v) {
-                            $s[] = 'subkelompok ' . strtolower($v->item_name) . (Utilities::getAbsoluteValue($v->INFMOM) != 0 ? (' sebesar ' . Utilities::getAbsoluteValue($v->INFMOM) . ' persen') : '');
+                            $s[] = 'subkelompok ' . strtolower($v->item_name) . (($v->INFMOM != 0 ? (' sebesar ' . Utilities::getFormattedNumber($v->INFMOM) . ' persen') : ''));
                         }
                         if (count($value) != 0) {
                             if ($key == 'inf') {
@@ -458,7 +457,7 @@ class MainController extends Controller
                     foreach ($komoditas_group as $key => $value) {
                         $s = [];
                         foreach ($value as $v) {
-                            $s[] = strtolower($v->item_name) . ' sebesar ' . Utilities::getAbsoluteValue($v->ANDILMOM) . ' persen';
+                            $s[] = strtolower($v->item_name) . ' sebesar ' . Utilities::getFormattedNumber($v->ANDILMOM, 4) . ' persen';
                         }
                         if ($key == 'inf') {
                             if (count($value) > 1) {
@@ -478,7 +477,7 @@ class MainController extends Controller
                             }
                         }
                     }
-                    $paragraph_array['third'] = 'Kelompok ini pada ' . $k->monthdetail->name . ' ' . $k->yeardetail->name . ' memberikan andil/sumbangan ' . Utilities::getInfTypeString($k->ANDILMOM) . ' sebesar ' . Utilities::getAbsoluteValue($k->ANDILMOM) . ' persen. ' . Utilities::getSentenceFromArray($sentence, '. ', '. ') . '.';
+                    $paragraph_array['third'] = 'Kelompok ini pada ' . $k->monthdetail->name . ' ' . $k->yeardetail->name . ' memberikan andil/sumbangan ' . Utilities::getInfTypeString($k->ANDILMOM) . ' sebesar ' . Utilities::getFormattedNumber($k->ANDILMOM, 4) . ' persen. ' . Utilities::getSentenceFromArray($sentence, '. ', '. ') . '.';
                     //paragraf ketiga
                 }
 
@@ -507,12 +506,12 @@ class MainController extends Controller
 
             $sentence = 'Tingkat ' . Utilities::getInfTypeString($infcurrent->INFYTD) . ' tahun kalender ' .
                 $infcurrent->monthdetail->name . ' ' . $infcurrent->yeardetail->name .
-                ' sebesar ' . Utilities::getAbsoluteValue($infcurrent->INFYTD) .
+                ' sebesar ' . Utilities::getFormattedNumber($infcurrent->INFYTD) .
                 ' persen dan tingkat ' . Utilities::getInfTypeString($infcurrent->INFYOY) . ' tahun ke tahun (' . $infcurrent->monthdetail->name . ' ' . $infcurrent->yeardetail->name .
                 ' terhadap ' . $infcurrent->monthdetail->name . ' ' . $yearminus1->name . ') sebesar ' .
-                Utilities::getAbsoluteValue($infcurrent->INFYOY) . ' persen. ' .
-                'Sedangkan tingkat ' . Utilities::getInfTypeString($infyearminus1->INFYTD) . ' tahun kalender ' . $infyearminus1->monthdetail->name . ' ' . $infyearminus1->yeardetail->name . ' adalah sebesar ' . Utilities::getAbsoluteValue($infyearminus1->INFYTD) . ' persen dan tingkat ' . Utilities::getInfTypeString($infyearminus2->INFYTD) . ' tahun kalender ' . $infyearminus2->monthdetail->name . ' ' . $infyearminus2->yeardetail->name . ' adalah sebesar ' . Utilities::getAbsoluteValue($infyearminus2->INFYTD) . ' persen. ' .
-                'Sementara itu, tingkat ' . Utilities::getInfTypeString($infyearminus1->INFYOY) . ' tahun ke tahun untuk ' . $infyearminus1->monthdetail->name . ' ' . $infyearminus1->yeardetail->name . ' terhadap ' . $infyearminus2->monthdetail->name . ' ' . $infyearminus2->yeardetail->name . ' adalah sebesar ' . Utilities::getAbsoluteValue($infyearminus1->INFYOY) . ' persen dan tingkat ' . Utilities::getInfTypeString($infyearminus2->INFYOY) . ' tahun ke tahun untuk ' . $infyearminus2->monthdetail->name . ' ' . $infyearminus2->yeardetail->name . ' terhadap ' . $infyearminus2->monthdetail->name . ' ' . $yearminus3->name . ' adalah sebesar ' . Utilities::getAbsoluteValue($infyearminus2->INFYOY) . ' persen.';
+                Utilities::getFormattedNumber($infcurrent->INFYOY) . ' persen. ' .
+                'Sedangkan tingkat ' . Utilities::getInfTypeString($infyearminus1->INFYTD) . ' tahun kalender ' . $infyearminus1->monthdetail->name . ' ' . $infyearminus1->yeardetail->name . ' adalah sebesar ' . Utilities::getFormattedNumber($infyearminus1->INFYTD) . ' persen dan tingkat ' . Utilities::getInfTypeString($infyearminus2->INFYTD) . ' tahun kalender ' . $infyearminus2->monthdetail->name . ' ' . $infyearminus2->yeardetail->name . ' adalah sebesar ' . Utilities::getFormattedNumber($infyearminus2->INFYTD) . ' persen. ' .
+                'Sementara itu, tingkat ' . Utilities::getInfTypeString($infyearminus1->INFYOY) . ' tahun ke tahun untuk ' . $infyearminus1->monthdetail->name . ' ' . $infyearminus1->yeardetail->name . ' terhadap ' . $infyearminus2->monthdetail->name . ' ' . $infyearminus2->yeardetail->name . ' adalah sebesar ' . Utilities::getFormattedNumber($infyearminus1->INFYOY) . ' persen dan tingkat ' . Utilities::getInfTypeString($infyearminus2->INFYOY) . ' tahun ke tahun untuk ' . $infyearminus2->monthdetail->name . ' ' . $infyearminus2->yeardetail->name . ' terhadap ' . $infyearminus2->monthdetail->name . ' ' . $yearminus3->name . ' adalah sebesar ' . Utilities::getFormattedNumber($infyearminus2->INFYOY) . ' persen.';
 
             $result['Perbandingan Inflasi Tahunan'] = $sentence;
 
@@ -530,7 +529,7 @@ class MainController extends Controller
             ];
             foreach ($area_sentence as $key => $value) {
                 for ($i = 1; $i < count($jatimarea[$key]); $i++) {
-                    $area_sentence[$key][] = Utilities::getAreaType($jatimarea[$key][$i]->area_code) . ' ' . ucfirst(strtolower($jatimarea[$key][$i]->area_name)) . ' sebesar ' . Utilities::getAbsoluteValue($jatimarea[$key][$i]->INFMOM);
+                    $area_sentence[$key][] = Utilities::getAreaType($jatimarea[$key][$i]->area_code) . ' ' . ucfirst(strtolower($jatimarea[$key][$i]->area_name)) . ' sebesar ' . Utilities::getFormattedNumber($jatimarea[$key][$i]->INFMOM);
                 }
             }
             $sentence =
@@ -541,15 +540,15 @@ class MainController extends Controller
                 '.' .
 
                 (count($jatimarea['inf']) > 0 ? (count($jatimarea['inf']) == 1 ?
-                    (' Inflasi terjadi di ' . Utilities::getAreaType($jatimarea['inf']->first()->area_code) . ' ' . ucfirst(strtolower($jatimarea['inf']->first()->area_name)) . ' sebesar ' . Utilities::getAbsoluteValue($jatimarea['inf']->first()->INFMOM) . ' persen. ')
+                    (' Inflasi terjadi di ' . Utilities::getAreaType($jatimarea['inf']->first()->area_code) . ' ' . ucfirst(strtolower($jatimarea['inf']->first()->area_name)) . ' sebesar ' . Utilities::getFormattedNumber($jatimarea['inf']->first()->INFMOM) . ' persen. ')
                     : (' Inflasi tertinggi terjadi di ' . Utilities::getAreaType($jatimarea['inf']->first()->area_code) . ' ' .
-                        ucfirst(strtolower($jatimarea['inf']->first()->area_name)) . ' sebesar ' . Utilities::getAbsoluteValue($jatimarea['inf']->first()->INFMOM) .
+                        ucfirst(strtolower($jatimarea['inf']->first()->area_name)) . ' sebesar ' . Utilities::getFormattedNumber($jatimarea['inf']->first()->INFMOM) .
                         ' persen diikuti ' . Utilities::getSentenceFromArray($area_sentence['inf']) . '.')) : '') .
 
                 (count($jatimarea['def']) > 0 ? (count($jatimarea['def']) == 1 ?
-                    (' Deflasi terjadi di ' . Utilities::getAreaType($jatimarea['def']->first()->area_code) . ' ' . ucfirst(strtolower($jatimarea['def']->first()->area_name)) . ' sebesar ' . Utilities::getAbsoluteValue($jatimarea['def']->first()->INFMOM) . ' persen.')
+                    (' Deflasi terjadi di ' . Utilities::getAreaType($jatimarea['def']->first()->area_code) . ' ' . ucfirst(strtolower($jatimarea['def']->first()->area_name)) . ' sebesar ' . Utilities::getFormattedNumber($jatimarea['def']->first()->INFMOM) . ' persen.')
                     : (' Deflasi tertinggi terjadi di ' . Utilities::getAreaType($jatimarea['def']->first()->area_code) . ' ' .
-                        ucfirst(strtolower($jatimarea['def']->first()->area_name)) . ' sebesar ' . Utilities::getAbsoluteValue($jatimarea['def']->first()->INFMOM) .
+                        ucfirst(strtolower($jatimarea['def']->first()->area_name)) . ' sebesar ' . Utilities::getFormattedNumber($jatimarea['def']->first()->INFMOM) .
                         ' persen diikuti ' . Utilities::getSentenceFromArray($area_sentence['def']) . '.')) : '') .
                 ' (Lihat Tabel 3)';
 
@@ -597,24 +596,24 @@ class MainController extends Controller
                 '.' .
 
                 (count($jawaarea['inf']) > 0 ? (count($jawaarea['inf']) == 1 ?
-                    (' Inflasi terjadi di ' . Utilities::getAreaType($jawaarea['inf']->first()->area_code) . ' ' . ucfirst(strtolower($jawaarea['inf']->first()->area_name)) . ' sebesar ' . Utilities::getAbsoluteValue($jawaarea['inf']->first()->INFMOM) . ' persen dengan IHK sebesar ' . $jawaarea['inf']->first()->IHK . '. ')
+                    (' Inflasi terjadi di ' . Utilities::getAreaType($jawaarea['inf']->first()->area_code) . ' ' . ucfirst(strtolower($jawaarea['inf']->first()->area_name)) . ' sebesar ' . Utilities::getFormattedNumber($jawaarea['inf']->first()->INFMOM) . ' persen dengan IHK sebesar ' . Utilities::getFormattedNumber($jawaarea['inf']->first()->IHK) . '. ')
                     : (' Inflasi tertinggi terjadi di ' . Utilities::getAreaType($jawaarea['inf']->first()->area_code) . ' ' .
-                        ucfirst(strtolower($jawaarea['inf']->first()->area_name)) . ' sebesar ' . Utilities::getAbsoluteValue($jawaarea['inf']->first()->INFMOM) .
-                        ' persen dengan IHK sebesar ' . $jawaarea['inf']->first()->IHK .
+                        ucfirst(strtolower($jawaarea['inf']->first()->area_name)) . ' sebesar ' . Utilities::getFormattedNumber($jawaarea['inf']->first()->INFMOM) .
+                        ' persen dengan IHK sebesar ' . Utilities::getFormattedNumber($jawaarea['inf']->first()->IHK) .
 
                         ' dan inflasi terendah terjadi di ' . Utilities::getAreaType($jawaarea['inf']->last()->area_code) . ' ' .
-                        ucfirst(strtolower($jawaarea['inf']->last()->area_name)) . ' sebesar ' . Utilities::getAbsoluteValue($jawaarea['inf']->last()->INFMOM) .
-                        ' persen dengan IHK sebesar ' . $jawaarea['inf']->last()->IHK . '.')) : '') .
+                        ucfirst(strtolower($jawaarea['inf']->last()->area_name)) . ' sebesar ' . Utilities::getFormattedNumber($jawaarea['inf']->last()->INFMOM) .
+                        ' persen dengan IHK sebesar ' . Utilities::getFormattedNumber($jawaarea['inf']->last()->IHK) . '.')) : '') .
 
                 (count($jawaarea['def']) > 0 ? (count($jawaarea['def']) == 1 ?
-                    (' Deflasi terjadi di ' . Utilities::getAreaType($jawaarea['def']->first()->area_code) . ' ' . ucfirst(strtolower($jawaarea['def']->first()->area_name)) . ' sebesar ' . Utilities::getAbsoluteValue($jawaarea['def']->first()->INFMOM) . ' persen dengan IHK sebesar ' . $jawaarea['def']->first()->IHK . '. ')
+                    (' Deflasi terjadi di ' . Utilities::getAreaType($jawaarea['def']->first()->area_code) . ' ' . ucfirst(strtolower($jawaarea['def']->first()->area_name)) . ' sebesar ' . Utilities::getFormattedNumber($jawaarea['def']->first()->INFMOM) . ' persen dengan IHK sebesar ' . Utilities::getFormattedNumber($jawaarea['def']->first()->IHK) . '. ')
                     : (' Deflasi tertinggi terjadi di ' . Utilities::getAreaType($jawaarea['def']->first()->area_code) . ' ' .
-                        ucfirst(strtolower($jawaarea['def']->first()->area_name)) . ' sebesar ' . Utilities::getAbsoluteValue($jawaarea['def']->first()->INFMOM) .
-                        ' persen dengan IHK sebesar ' . $jawaarea['def']->first()->IHK .
+                        ucfirst(strtolower($jawaarea['def']->first()->area_name)) . ' sebesar ' . Utilities::getFormattedNumber($jawaarea['def']->first()->INFMOM) .
+                        ' persen dengan IHK sebesar ' . Utilities::getFormattedNumber($jawaarea['def']->first()->IHK) .
 
                         ' dan deflasi terendah terjadi di ' . Utilities::getAreaType($jawaarea['def']->last()->area_code) . ' ' .
-                        ucfirst(strtolower($jawaarea['def']->last()->area_name)) . ' sebesar ' . Utilities::getAbsoluteValue($jawaarea['def']->last()->INFMOM) .
-                        ' persen dengan IHK sebesar ' . $jawaarea['def']->last()->IHK . '.')) : '') . ' (Lihat tabel 4).';
+                        ucfirst(strtolower($jawaarea['def']->last()->area_name)) . ' sebesar ' . Utilities::getFormattedNumber($jawaarea['def']->last()->INFMOM) .
+                        ' persen dengan IHK sebesar ' . Utilities::getFormattedNumber($jawaarea['def']->last()->IHK) . '.')) : '') . ' (Lihat tabel 4).';
 
             $result['Indeks Harga Konsumen dan Inflasi Antarkota di Jawa Timur']['Pulau Jawa'] = $sentence;
 
@@ -632,25 +631,25 @@ class MainController extends Controller
 
             $first_sentence = 'Komponen energi pada ' . $energyinflation->monthdetail->name . ' ' . $energyinflation->yeardetail->name;
             if (Utilities::isEnergyFoodInfStill($energyinflation->INFMOM)) {
-                $first_sentence = $first_sentence . ' tidak mengalami perubahan indeks dibandingkan dengan bulan sebelumnya, yaitu ' . $energyinflation->IHK . '.';
+                $first_sentence = $first_sentence . ' tidak mengalami perubahan indeks dibandingkan dengan bulan sebelumnya, yaitu ' . Utilities::getFormattedNumber($energyinflation->IHK) . '.';
             } else {
                 $first_sentence = $first_sentence . ' mengalami ' . Utilities::getInfTypeString($energyinflation->INFMOM) .
-                    ' sebesar ' . Utilities::getAbsoluteValue($energyinflation->INFMOM) .
-                    ' persen atau mengalami perubahan indeks dari ' . $prevenergyinflation->IHK . ' pada ' . $prevenergyinflation->monthdetail->name . ' ' .
-                    $prevenergyinflation->yeardetail->name . ' menjadi ' . $energyinflation->IHK . ' pada ' . $energyinflation->monthdetail->name . ' ' .
+                    ' sebesar ' . Utilities::getFormattedNumber($energyinflation->INFMOM) .
+                    ' persen atau mengalami perubahan indeks dari ' . Utilities::getFormattedNumber($prevenergyinflation->IHK) . ' pada ' . $prevenergyinflation->monthdetail->name . ' ' .
+                    $prevenergyinflation->yeardetail->name . ' menjadi ' . Utilities::getFormattedNumber($energyinflation->IHK) . ' pada ' . $energyinflation->monthdetail->name . ' ' .
                     $energyinflation->yeardetail->name . '.';
             }
             $last_sentence = '';
             if ($energyinflation->ANDILMOM == 0) {
                 $last_sentence = 'Komponen energi pada ' . $energyinflation->monthdetail->name . ' ' . $energyinflation->yeardetail->name . ' tidak memberikan andil/sumbangan terhadap inflasi nasional.';
             } else {
-                $last_sentence = 'Komponen energi pada ' . $energyinflation->monthdetail->name . ' ' . $energyinflation->yeardetail->name . ' memberikan andil/sumbangan terhadap inflasi nasional sebesar ' . Utilities::getAbsoluteValue($energyinflation->ANDILMOM) . ' persen.';
+                $last_sentence = 'Komponen energi pada ' . $energyinflation->monthdetail->name . ' ' . $energyinflation->yeardetail->name . ' memberikan andil/sumbangan terhadap inflasi nasional sebesar ' . Utilities::getFormattedNumber($energyinflation->ANDILMOM, 4) . ' persen.';
             }
             $sentence =
                 $first_sentence . ' ' . ucfirst(Utilities::getInfTypeString($energyinflation->INFYTD)) .
                 ' komponen energi untuk tahun kalender ' . $energyinflation->monthdetail->name . ' ' . $energyinflation->yeardetail->name . ' sebesar ' . $energyinflation->INFYTD .
                 ' persen dan ' . Utilities::getInfTypeString($energyinflation->INFYTD) . ' tahun ke tahun (' . $energyinflation->monthdetail->name . ' ' . $energyinflation->yeardetail->name .
-                ' terhadap ' . $energyinflation->monthdetail->name . ' ' . $yearminus1->name . ') sebesar ' . Utilities::getAbsoluteValue($energyinflation->INFYOY) . ' persen. ' .
+                ' terhadap ' . $energyinflation->monthdetail->name . ' ' . $yearminus1->name . ') sebesar ' . Utilities::getFormattedNumber($energyinflation->INFYOY) . ' persen. ' .
                 $last_sentence . ' (lihat Tabel 6)';
 
             $result['Inflasi Komponen Energi'] = $sentence;
@@ -667,24 +666,24 @@ class MainController extends Controller
             ])->first();
             $first_sentence = 'Bahan makanan pada ' . $foodinflation->monthdetail->name . ' ' . $foodinflation->yeardetail->name;
             if (Utilities::isEnergyFoodInfStill($foodinflation->INFMOM)) {
-                $first_sentence = $first_sentence . ' tidak mengalami perubahan indeks dibandingkan dengan bulan sebelumnya, yaitu ' . $foodinflation->IHK . '.';
+                $first_sentence = $first_sentence . ' tidak mengalami perubahan indeks dibandingkan dengan bulan sebelumnya, yaitu ' . Utilities::getFormattedNumber($foodinflation->IHK) . '.';
             } else {
                 $first_sentence = $first_sentence . ' mengalami ' . Utilities::getInfTypeString($foodinflation->INFMOM) .
-                    ' sebesar ' . Utilities::getAbsoluteValue($foodinflation->INFMOM) .
-                    ' persen atau mengalami perubahan indeks dari ' . $prevfoodinflation->IHK . ' pada ' . $prevfoodinflation->monthdetail->name . ' ' .
-                    $prevfoodinflation->yeardetail->name . ' menjadi ' . $foodinflation->IHK . ' pada ' . $foodinflation->monthdetail->name . ' ' .
+                    ' sebesar ' . Utilities::getFormattedNumber($foodinflation->INFMOM) .
+                    ' persen atau mengalami perubahan indeks dari ' . Utilities::getFormattedNumber($prevfoodinflation->IHK) . ' pada ' . $prevfoodinflation->monthdetail->name . ' ' .
+                    $prevfoodinflation->yeardetail->name . ' menjadi ' . Utilities::getFormattedNumber($foodinflation->IHK) . ' pada ' . $foodinflation->monthdetail->name . ' ' .
                     $foodinflation->yeardetail->name . '.';
             }
             $last_sentence = '';
             if ($foodinflation->ANDILMOM == 0) {
                 $last_sentence = 'Bahan makanan pada ' . $foodinflation->monthdetail->name . ' ' . $foodinflation->yeardetail->name . ' tidak memberikan andil/sumbangan terhadap inflasi nasional.';
             } else {
-                $last_sentence = 'Bahan makanan pada ' . $foodinflation->monthdetail->name . ' ' . $foodinflation->yeardetail->name . ' memberikan andil/sumbangan terhadap inflasi nasional sebesar ' . Utilities::getAbsoluteValue($foodinflation->ANDILMOM) . ' persen.';
+                $last_sentence = 'Bahan makanan pada ' . $foodinflation->monthdetail->name . ' ' . $foodinflation->yeardetail->name . ' memberikan andil/sumbangan terhadap inflasi nasional sebesar ' . Utilities::getFormattedNumber($foodinflation->ANDILMOM, 4) . ' persen.';
             }
             $sentence = $first_sentence . ' ' . ucfirst(Utilities::getInfTypeString($foodinflation->INFYTD)) .
                 ' bahan makanan untuk tahun kalender ' . $foodinflation->monthdetail->name . ' ' . $foodinflation->yeardetail->name . ' sebesar ' . $foodinflation->INFYTD .
                 ' persen dan ' . Utilities::getInfTypeString($foodinflation->INFYTD) . ' tahun ke tahun (' . $foodinflation->monthdetail->name . ' ' . $foodinflation->yeardetail->name .
-                ' terhadap ' . $foodinflation->monthdetail->name . ' ' . $yearminus1->name . ') sebesar ' . Utilities::getAbsoluteValue($foodinflation->INFYOY) . ' persen. ' .
+                ' terhadap ' . $foodinflation->monthdetail->name . ' ' . $yearminus1->name . ') sebesar ' . Utilities::getFormattedNumber($foodinflation->INFYOY) . ' persen. ' .
                 $last_sentence . ' (lihat Tabel 6)';
 
             $result['Inflasi Bahan Makanan'] = $sentence;
@@ -752,17 +751,17 @@ class MainController extends Controller
                 else $sheet->getCell('B' . $i)
                     ->setValue('Data Belum Diupload');
                 $sheet->getCell('C' . $i)
-                    ->setValue($infprev[$j]->IHK);
+                    ->setValue(Utilities::getFormattedNumber($infprev[$j]->IHK));
                 $sheet->getCell('D' . $i)
-                    ->setValue($infcurrent[$j]->IHK);
+                    ->setValue(Utilities::getFormattedNumber($infcurrent[$j]->IHK));
                 $sheet->getCell('E' . $i)
-                    ->setValue($infcurrent[$j]->INFMOM);
+                    ->setValue(Utilities::getFormattedNumber($infcurrent[$j]->INFMOM, 2, false));
                 $sheet->getCell('F' . $i)
-                    ->setValue($infcurrent[$j]->INFYTD);
+                    ->setValue(Utilities::getFormattedNumber($infcurrent[$j]->INFYTD, 2, false));
                 $sheet->getCell('G' . $i)
-                    ->setValue($infcurrent[$j]->INFYOY);
+                    ->setValue(Utilities::getFormattedNumber($infcurrent[$j]->INFYOY, 2, false));
                 $sheet->getCell('H' . $i)
-                    ->setValue($infcurrent[$j]->ANDILMOM);
+                    ->setValue(Utilities::getFormattedNumber($infcurrent[$j]->ANDILMOM, 4, false));
 
                 $i++;
             }
@@ -815,11 +814,11 @@ class MainController extends Controller
             $j = 0;
             foreach (range('B', 'D') as $v) {
                 $sheet->getCell($v . '4')
-                    ->setValue($infarray[$j]->INFMOM);
+                    ->setValue(Utilities::getFormattedNumber($infarray[$j]->INFMOM, 2, false));
                 $sheet->getCell($v . '5')
-                    ->setValue($infarray[$j]->INFYTD);
+                    ->setValue(Utilities::getFormattedNumber($infarray[$j]->INFYTD, 2, false));
                 $sheet->getCell($v . '6')
-                    ->setValue($infarray[$j]->INFYOY);
+                    ->setValue(Utilities::getFormattedNumber($infarray[$j]->INFYOY, 2, false));
                 $j++;
             }
             //Tabel 2
@@ -850,9 +849,9 @@ class MainController extends Controller
                 $sheet->getCell('A' . $j)
                     ->setValue(ucwords(strtolower($inf->area_name)));
                 $sheet->getCell('B' . $j)
-                    ->setValue($inf->IHK);
+                    ->setValue(Utilities::getFormattedNumber($inf->IHK));
                 $sheet->getCell('C' . $j)
-                    ->setValue($inf->INFMOM);
+                    ->setValue(Utilities::getFormattedNumber($inf->INFMOM, 2, false));
                 $j++;
             }
             //Tabel 3
@@ -882,9 +881,9 @@ class MainController extends Controller
                 $sheet->getCell('A' . $j)
                     ->setValue(ucwords(strtolower($inf->area_name)));
                 $sheet->getCell('B' . $j)
-                    ->setValue($inf->IHK);
+                    ->setValue(Utilities::getFormattedNumber($inf->IHK));
                 $sheet->getCell('C' . $j)
-                    ->setValue($inf->INFMOM);
+                    ->setValue(Utilities::getFormattedNumber($inf->INFMOM, 2, false));
                 $j++;
             }
             //Tabel 4
@@ -894,7 +893,7 @@ class MainController extends Controller
                 'month_id' => $currentmonth->id,
                 'year_id' => $currentyear->id,
             ])->first();
-            $currentenergyprev = EnergyInflationData::where([
+            $prevenergyinf = EnergyInflationData::where([
                 'month_id' => $prevmonth->id,
                 'year_id' => $prevyear->id,
             ])->first();
@@ -903,7 +902,7 @@ class MainController extends Controller
                 'month_id' => $currentmonth->id,
                 'year_id' => $currentyear->id,
             ])->first();
-            $currentfoodprev = FoodInflationData::where([
+            $prevfoodinf = FoodInflationData::where([
                 'month_id' => $prevmonth->id,
                 'year_id' => $prevyear->id,
             ])->first();
@@ -932,35 +931,34 @@ class MainController extends Controller
             $sheet->getCell('G3')
                 ->setValue('Andil Inflasi ' . $currentmonth->name . ' ' . $currentyear->name . ' (%)');
 
-
             $sheet->getCell('A4')
                 ->setValue('Energi');
             $sheet->getCell('A5')
                 ->setValue('Bahan Makanan');
             $sheet->getCell('B4')
-                ->setValue($prevenergyinflation->IHK);
+                ->setValue(Utilities::getFormattedNumber($prevenergyinf->IHK));
             $sheet->getCell('B5')
-                ->setValue($prevfoodinflation->IHK);
+                ->setValue(Utilities::getFormattedNumber($prevfoodinf->IHK));
             $sheet->getCell('C4')
-                ->setValue($currentenergyinf->IHK);
+                ->setValue(Utilities::getFormattedNumber($currentenergyinf->IHK));
             $sheet->getCell('C5')
-                ->setValue($currentfoodinf->IHK);
+                ->setValue(Utilities::getFormattedNumber($currentfoodinf->IHK));
             $sheet->getCell('D4')
-                ->setValue($currentenergyinf->INFMOM);
+                ->setValue(Utilities::getFormattedNumber($currentenergyinf->INFMOM, 2, false));
             $sheet->getCell('D5')
-                ->setValue($currentfoodinf->INFMOM);
+                ->setValue(Utilities::getFormattedNumber($currentfoodinf->INFMOM, 2, false));
             $sheet->getCell('E4')
-                ->setValue($currentenergyinf->INFYTD);
+                ->setValue(Utilities::getFormattedNumber($currentenergyinf->INFYTD, 2, false));
             $sheet->getCell('E5')
-                ->setValue($currentfoodinf->INFYTD);
+                ->setValue(Utilities::getFormattedNumber($currentfoodinf->INFYTD, 2, false));
             $sheet->getCell('F4')
-                ->setValue($currentenergyinf->INFYOY);
+                ->setValue(Utilities::getFormattedNumber($currentenergyinf->INFYOY, 2, false));
             $sheet->getCell('F5')
-                ->setValue($currentfoodinf->INFYOY);
+                ->setValue(Utilities::getFormattedNumber($currentfoodinf->INFYOY, 2, false));
             $sheet->getCell('G4')
-                ->setValue($currentenergyinf->ANDILMOM);
+                ->setValue(Utilities::getFormattedNumber($currentenergyinf->ANDILMOM, 4, false));
             $sheet->getCell('G5')
-                ->setValue($currentfoodinf->ANDILMOM);
+                ->setValue(Utilities::getFormattedNumber($currentfoodinf->ANDILMOM, 4, false));
 
             //Tabel 5
 
