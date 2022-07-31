@@ -34,6 +34,21 @@ class MainController extends Controller
         ]);
     }
 
+    public function indexTable()
+    {
+        $currentmonth = Month::where(['code' => date('m')])->first()->id;
+        $currentyear = Year::where(['code' => date('Y')])->first()->id;
+        $months = Month::all();
+        $years = Year::all();
+
+        return view('brs-table-index', [
+            'months' => $months,
+            'years' => $years,
+            'currentmonth' => $currentmonth,
+            'currentyear' => $currentyear
+        ]);
+    }
+
     public function showUpload()
     {
         return view('brs-upload');
@@ -42,14 +57,21 @@ class MainController extends Controller
     public function upload(Request $request)
     {
         $request->validate([
-            'file-inf' => 'required',
-            'file-inf-area' => 'required'
+            'file-inf' => 'required_without_all:file-inf-area,file-inf-food-energy',
+            'file-inf-area' => 'required_without_all:file-inf,file-inf-food-energy',
+            'file-inf-food-energy' => 'required_without_all:file-inf,file-inf-area'
         ]);
 
         try {
-            Excel::import(new InflationDataImport, $request->file('file-inf'));
-            Excel::import(new InflationDataByAreaImport, $request->file('file-inf-area'));
-            Excel::import(new FoodAndEnergyInflationDataImport, $request->file('file-inf-food-energy'));
+            if ($request->file('file-inf') != null) {
+                Excel::import(new InflationDataImport, $request->file('file-inf'));
+            }
+            if ($request->file('file-inf-area') != null) {
+                Excel::import(new InflationDataByAreaImport, $request->file('file-inf-area'));
+            }
+            if ($request->file('file-inf-food-energy') != null) {
+                Excel::import(new FoodAndEnergyInflationDataImport, $request->file('file-inf-food-energy'));
+            }
 
             return redirect('/upload')->with('success-upload', 'Upload Berhasil');
         } catch (Exception $e) {
@@ -57,7 +79,7 @@ class MainController extends Controller
         }
     }
 
-    public function generate(Request $request)
+    public function generateText(Request $request)
     {
         $request->validate([
             'month' => 'required',
@@ -530,11 +552,15 @@ class MainController extends Controller
                 'def' => []
             ];
             foreach ($area_sentence as $key => $value) {
-                for ($i = 1; $i < count($jatimarea[$key]); $i++) {
-                    $area_sentence[$key][] = Utilities::getAreaType($jatimarea[$key][$i]->area_code) . ' ' . ucfirst(strtolower($jatimarea[$key][$i]->area_name)) . ' sebesar ' . Utilities::getFormattedNumber($jatimarea[$key][$i]->INFMOM);
+                $i = 0;
+                foreach ($jatimarea[$key] as $jatimareaitem) {
+                    if ($i > 0) {
+                        $area_sentence[$key][] = Utilities::getAreaType($jatimareaitem->area_code) . ' ' . ucfirst(strtolower($jatimareaitem->area_name)) .
+                            ' sebesar ' . Utilities::getFormattedNumber($jatimareaitem->INFMOM) . ' persen';
+                    }
+                    $i++;
                 }
             }
-            // dd($jatimarea);
 
             $sentence =
                 'Dari ' . (count($jatimarea['inf']) + count($jatimarea['def'])) . ' kota IHK di Jawa Timur, ' .
@@ -651,7 +677,7 @@ class MainController extends Controller
             }
             $sentence =
                 $first_sentence . ' ' . ucfirst(Utilities::getInfTypeString($energyinflation->INFYTD)) .
-                ' komponen energi untuk tahun kalender ' . $energyinflation->monthdetail->name . ' ' . $energyinflation->yeardetail->name . ' sebesar ' . $energyinflation->INFYTD .
+                ' komponen energi untuk tahun kalender ' . $energyinflation->monthdetail->name . ' ' . $energyinflation->yeardetail->name . ' sebesar ' . Utilities::getFormattedNumber($energyinflation->INFYTD) .
                 ' persen dan ' . Utilities::getInfTypeString($energyinflation->INFYTD) . ' tahun ke tahun (' . $energyinflation->monthdetail->name . ' ' . $energyinflation->yeardetail->name .
                 ' terhadap ' . $energyinflation->monthdetail->name . ' ' . $yearminus1->name . ') sebesar ' . Utilities::getFormattedNumber($energyinflation->INFYOY) . ' persen. ' .
                 $last_sentence . ' (lihat Tabel 6)';
@@ -685,293 +711,13 @@ class MainController extends Controller
                 $last_sentence = 'Bahan makanan pada ' . $foodinflation->monthdetail->name . ' ' . $foodinflation->yeardetail->name . ' memberikan andil/sumbangan terhadap inflasi nasional sebesar ' . Utilities::getFormattedNumber($foodinflation->ANDILMOM, 4) . ' persen.';
             }
             $sentence = $first_sentence . ' ' . ucfirst(Utilities::getInfTypeString($foodinflation->INFYTD)) .
-                ' bahan makanan untuk tahun kalender ' . $foodinflation->monthdetail->name . ' ' . $foodinflation->yeardetail->name . ' sebesar ' . $foodinflation->INFYTD .
+                ' bahan makanan untuk tahun kalender ' . $foodinflation->monthdetail->name . ' ' . $foodinflation->yeardetail->name . ' sebesar ' . Utilities::getFormattedNumber($foodinflation->INFYTD) .
                 ' persen dan ' . Utilities::getInfTypeString($foodinflation->INFYTD) . ' tahun ke tahun (' . $foodinflation->monthdetail->name . ' ' . $foodinflation->yeardetail->name .
                 ' terhadap ' . $foodinflation->monthdetail->name . ' ' . $yearminus1->name . ') sebesar ' . Utilities::getFormattedNumber($foodinflation->INFYOY) . ' persen. ' .
                 $last_sentence . ' (lihat Tabel 6)';
 
             $result['Inflasi Bahan Makanan'] = $sentence;
             //Bab 5
-
-            //Excel
-
-            //Tabel 1
-
-            $infcurrent = InflationData::where('month_id', $currentmonth->id)
-                ->where('year_id', $currentyear->id)
-                ->where(function ($query) {
-                    $query->where('flag', '=', 1);
-                    $query->orWhere('flag', '=', 0);
-                })->get();
-
-            $infprev = InflationData::where('month_id', $prevmonth->id)
-                ->where('year_id', $prevyear->id)
-                ->where(function ($query) {
-                    $query->where('flag', '=', 1);
-                    $query->orWhere('flag', '=', 0);
-                })->get();
-
-            $infyearminus1 = InflationData::where('month_id', $currentmonth->id)
-                ->where('year_id', $yearminus1->id)
-                ->where(function ($query) {
-                    $query->where('flag', '=', 1);
-                    $query->orWhere('flag', '=', 0);
-                })->get();
-
-            $spreadsheet = new Spreadsheet();
-            $sheet = $spreadsheet->getActiveSheet();
-            $sheet->setTitle('Tabel 1');
-
-            $sheet->getCell('A1')
-                ->setValue('IHK dan Tingkat Inflasi Kota Probolinggo ' . $currentmonth->name . ' ' . $currentyear->name .
-                    ', Tahun Kalender ' . $currentmonth->name . ' ' . $currentyear->name .
-                    ', dan Tahun ke Tahun ' . $currentmonth->name . ' ' . $currentyear->name .
-                    ' Menurut Kelompok Pengeluaran (2018=100)');
-
-            $sheet->getCell('A3')
-                ->setValue('Kelompok Pengeluaran');
-            $sheet->getCell('B3')
-                ->setValue('IHK ' . $currentmonth->name . ' ' . $yearminus1->name);
-            $sheet->getCell('C3')
-                ->setValue('IHK ' . $prevmonth->name . ' ' . $prevyear->name);
-            $sheet->getCell('D3')
-                ->setValue('IHK ' . $currentmonth->name . ' ' . $currentyear->name);
-            $sheet->getCell('E3')
-                ->setValue('Tingkat Inflasi ' . $currentmonth->name . ' ' . $currentyear->name . ' (%)');
-            $sheet->getCell('F3')
-                ->setValue('Tingkat Inflasi Tahun Kalender ' . $currentmonth->name . ' ' . $currentyear->name . ' (%)');
-            $sheet->getCell('G3')
-                ->setValue('Tingkat Inflasi Tahun ke Tahun ' . $currentmonth->name . ' ' . $currentyear->name . ' (%)');
-            $sheet->getCell('H3')
-                ->setValue('Andil Inflasi ' . $currentmonth->name . ' ' . $currentyear->name . ' (%)');
-
-            $i = 4;
-            for ($j = 0; $j < count($infcurrent); $j++) {
-                $sheet->getCell('A' . $i)
-                    ->setValue(ucwords(strtolower($infcurrent[$j]->item_name)));
-                if (count($infyearminus1) == 12)
-                    $sheet->getCell('B' . $i)
-                        ->setValue($infyearminus1[$j]->IHK);
-                else $sheet->getCell('B' . $i)
-                    ->setValue('Data Belum Diupload');
-                $sheet->getCell('C' . $i)
-                    ->setValue(Utilities::getFormattedNumber($infprev[$j]->IHK));
-                $sheet->getCell('D' . $i)
-                    ->setValue(Utilities::getFormattedNumber($infcurrent[$j]->IHK));
-                $sheet->getCell('E' . $i)
-                    ->setValue(Utilities::getFormattedNumber($infcurrent[$j]->INFMOM, 2, false));
-                $sheet->getCell('F' . $i)
-                    ->setValue(Utilities::getFormattedNumber($infcurrent[$j]->INFYTD, 2, false));
-                $sheet->getCell('G' . $i)
-                    ->setValue(Utilities::getFormattedNumber($infcurrent[$j]->INFYOY, 2, false));
-                $sheet->getCell('H' . $i)
-                    ->setValue(Utilities::getFormattedNumber($infcurrent[$j]->ANDILMOM, 4, false));
-
-                $i++;
-            }
-
-            //Tabel 1
-
-            //Tabel 2
-
-            $infcurrent = InflationData::where('month_id', $currentmonth->id)
-                ->where('year_id', $currentyear->id)
-                ->where('flag', 0)->first();
-
-            $infyearminus1 = InflationData::where('month_id', $currentmonth->id)
-                ->where('year_id', $yearminus1->id)
-                ->where('flag', 0)->first();
-
-            $infyearminus2 = InflationData::where('month_id', $currentmonth->id)
-                ->where('year_id', $yearminus2->id)
-                ->where('flag', 0)->first();
-
-            $infarray = collect();
-            $infarray->push($infyearminus2);
-            $infarray->push($infyearminus1);
-            $infarray->push($infcurrent);
-
-            $spreadsheet->createSheet();
-            $spreadsheet->setActiveSheetIndex(1);
-            $sheet = $spreadsheet->getActiveSheet();
-            $sheet->setTitle('Tabel 2');
-
-            $sheet->getCell('A1')
-                ->setValue('Tingkat Inflasi Bulanan, Tahun Kalender, dan Tahun ke Tahun Kota Probolinggo ' . $yearminus2->name . '-' . $currentyear->name . ' (Persen)');
-
-            $sheet->getCell('A3')
-                ->setValue('Tingkat Inflasi');
-            $sheet->getCell('B3')
-                ->setValue($yearminus2->name);
-            $sheet->getCell('C3')
-                ->setValue($yearminus1->name);
-            $sheet->getCell('D3')
-                ->setValue($currentyear->name);
-
-            $sheet->getCell('A4')
-                ->setValue($currentmonth->name);
-            $sheet->getCell('A5')
-                ->setValue('Tahun Kalender (Januari-' . $currentmonth->name . ')');
-            $sheet->getCell('A6')
-                ->setValue('Tahun ke Tahun (' . $currentmonth->name . ' tahun n terhadap ' . $currentmonth->name . ' tahun n-1)');
-
-            $j = 0;
-            foreach (range('B', 'D') as $v) {
-                $sheet->getCell($v . '4')
-                    ->setValue(Utilities::getFormattedNumber($infarray[$j]->INFMOM, 2, false));
-                $sheet->getCell($v . '5')
-                    ->setValue(Utilities::getFormattedNumber($infarray[$j]->INFYTD, 2, false));
-                $sheet->getCell($v . '6')
-                    ->setValue(Utilities::getFormattedNumber($infarray[$j]->INFYOY, 2, false));
-                $j++;
-            }
-            //Tabel 2
-
-            //Tabel 3
-
-            $infbyarea = InflationDataByArea::where([
-                'month_id' => $currentmonth->id,
-                'year_id' => $currentyear->id,
-            ])->where('area_code', 'LIKE', '35%')->get();
-
-            $spreadsheet->createSheet();
-            $spreadsheet->setActiveSheetIndex(2);
-            $sheet = $spreadsheet->getActiveSheet();
-            $sheet->setTitle('Tabel 3');
-
-            $sheet->getCell('A1')
-                ->setValue('Perbandingan Indeks dan Tingkat Inflasi ' . $currentmonth->name . ' ' . $currentyear->name . ' Kota-Kota di Jawa Timur dengan Jawa Timur (2018=100)');
-            $sheet->getCell('A3')
-                ->setValue('Kota');
-            $sheet->getCell('B3')
-                ->setValue('IHK');
-            $sheet->getCell('C3')
-                ->setValue('Tingkat Inflasi (%)');
-
-            $j = 4;
-            foreach ($infbyarea as $inf) {
-                $sheet->getCell('A' . $j)
-                    ->setValue(ucwords(strtolower($inf->area_name)));
-                $sheet->getCell('B' . $j)
-                    ->setValue(Utilities::getFormattedNumber($inf->IHK));
-                $sheet->getCell('C' . $j)
-                    ->setValue(Utilities::getFormattedNumber($inf->INFMOM, 2, false));
-                $j++;
-            }
-            //Tabel 3
-
-            //Tabel 4
-            $infbyarea = InflationDataByArea::where([
-                'month_id' => $currentmonth->id,
-                'year_id' => $currentyear->id,
-            ])->where('area_code', 'LIKE', '3%')->get();
-
-            $spreadsheet->createSheet();
-            $spreadsheet->setActiveSheetIndex(3);
-            $sheet = $spreadsheet->getActiveSheet();
-            $sheet->setTitle('Tabel 4');
-
-            $sheet->getCell('A1')
-                ->setValue('Perbandingan Indeks dan Tingkat Inflasi ' . $currentmonth->name . ' ' . $currentyear->name . ' Kota-Kota di Pulau Jawa dengan Nasional (2018=100)');
-            $sheet->getCell('A3')
-                ->setValue('Kota');
-            $sheet->getCell('B3')
-                ->setValue('IHK');
-            $sheet->getCell('C3')
-                ->setValue('Tingkat Inflasi (%)');
-
-            $j = 4;
-            foreach ($infbyarea as $inf) {
-                $sheet->getCell('A' . $j)
-                    ->setValue(ucwords(strtolower($inf->area_name)));
-                $sheet->getCell('B' . $j)
-                    ->setValue(Utilities::getFormattedNumber($inf->IHK));
-                $sheet->getCell('C' . $j)
-                    ->setValue(Utilities::getFormattedNumber($inf->INFMOM, 2, false));
-                $j++;
-            }
-            //Tabel 4
-
-            //Tabel 5
-            $currentenergyinf = EnergyInflationData::where([
-                'month_id' => $currentmonth->id,
-                'year_id' => $currentyear->id,
-            ])->first();
-            $prevenergyinf = EnergyInflationData::where([
-                'month_id' => $prevmonth->id,
-                'year_id' => $prevyear->id,
-            ])->first();
-
-            $currentfoodinf = FoodInflationData::where([
-                'month_id' => $currentmonth->id,
-                'year_id' => $currentyear->id,
-            ])->first();
-            $prevfoodinf = FoodInflationData::where([
-                'month_id' => $prevmonth->id,
-                'year_id' => $prevyear->id,
-            ])->first();
-
-            $spreadsheet->createSheet();
-            $spreadsheet->setActiveSheetIndex(4);
-            $sheet = $spreadsheet->getActiveSheet();
-            $sheet->setTitle('Tabel 5');
-
-            $sheet->getCell('A1')
-                ->setValue('Tingkat Inflasi ' . $currentmonth->name . ' ' . $currentyear->name . ', Tahun Kalender ' . $currentyear->name . ', dan Tahun ke Tahun Kota Probolinggo Menurut Kelompok Komponen Energi dan Bahan Makanan');
-            $sheet->getCell('A3')
-                ->setValue('Komponen');
-            $sheet->getCell('B3')
-                ->setValue('IHK ' . $prevmonth->name . ' ' . $prevyear->name);
-            $sheet->getCell('C3')
-                ->setValue('IHK ' . $currentmonth->name . ' ' . $currentyear->name);
-            $sheet->getCell('C3')
-                ->setValue('Tingkat Inflasi (%)');
-            $sheet->getCell('D3')
-                ->setValue('Tingkat Inflasi ' . $currentmonth->name . ' ' . $currentyear->name . ' (%)');
-            $sheet->getCell('E3')
-                ->setValue('Tingkat Inflasi Tahun Kalender ' . $currentmonth->name . ' ' . $currentyear->name . ' (%)');
-            $sheet->getCell('F3')
-                ->setValue('Tingkat Inflasi Tahun ke Tahun ' . $currentmonth->name . ' ' . $currentyear->name . ' (%)');
-            $sheet->getCell('G3')
-                ->setValue('Andil Inflasi ' . $currentmonth->name . ' ' . $currentyear->name . ' (%)');
-
-            $sheet->getCell('A4')
-                ->setValue('Energi');
-            $sheet->getCell('A5')
-                ->setValue('Bahan Makanan');
-            $sheet->getCell('B4')
-                ->setValue(Utilities::getFormattedNumber($prevenergyinf->IHK));
-            $sheet->getCell('B5')
-                ->setValue(Utilities::getFormattedNumber($prevfoodinf->IHK));
-            $sheet->getCell('C4')
-                ->setValue(Utilities::getFormattedNumber($currentenergyinf->IHK));
-            $sheet->getCell('C5')
-                ->setValue(Utilities::getFormattedNumber($currentfoodinf->IHK));
-            $sheet->getCell('D4')
-                ->setValue(Utilities::getFormattedNumber($currentenergyinf->INFMOM, 2, false));
-            $sheet->getCell('D5')
-                ->setValue(Utilities::getFormattedNumber($currentfoodinf->INFMOM, 2, false));
-            $sheet->getCell('E4')
-                ->setValue(Utilities::getFormattedNumber($currentenergyinf->INFYTD, 2, false));
-            $sheet->getCell('E5')
-                ->setValue(Utilities::getFormattedNumber($currentfoodinf->INFYTD, 2, false));
-            $sheet->getCell('F4')
-                ->setValue(Utilities::getFormattedNumber($currentenergyinf->INFYOY, 2, false));
-            $sheet->getCell('F5')
-                ->setValue(Utilities::getFormattedNumber($currentfoodinf->INFYOY, 2, false));
-            $sheet->getCell('G4')
-                ->setValue(Utilities::getFormattedNumber($currentenergyinf->ANDILMOM, 4, false));
-            $sheet->getCell('G5')
-                ->setValue(Utilities::getFormattedNumber($currentfoodinf->ANDILMOM, 4, false));
-
-            //Tabel 5
-
-            header('Content-Type: application/vnd.ms-excel');
-            header('Content-Disposition: attachment;filename="Tabel Inflasi ' . $currentmonth->name . ' ' . $currentyear->name . '.xls"');
-            header('Cache-Control: max-age=0');
-
-            $writer = \PhpOffice\PhpSpreadsheet\IOFactory::createWriter($spreadsheet, 'Xls');
-            $writer->save('php://output');
 
             return $result;
         } else {
@@ -983,5 +729,312 @@ class MainController extends Controller
 
             return redirect('/')->with('error-generate', $error);
         }
+    }
+
+    public function generateTable(Request $request)
+    {
+        $request->validate([
+            'month' => 'required',
+            'year' => 'required',
+        ]);
+
+        $date = Year::find($request->year)->code . '-' . Month::find($request->month)->code . '-01';
+        $currentyear = date('Y', strtotime($date));
+        $currentmonth = date('m', strtotime($date));
+
+        $prevdate = $currentyear . '-' . $currentmonth . '-01';
+        $prevyear = date('Y', strtotime($prevdate . ' -1 months'));
+        $prevmonth = date('m', strtotime($prevdate . ' -1 months'));
+
+        $yearminus1 = date('Y', strtotime($date . ' -12 months'));
+        $yearminus2 = date('Y', strtotime($date . ' -24 months'));
+        $yearminus3 = date('Y', strtotime($date . ' -36 months'));
+
+        $currentmonth = Month::where(['code' => $currentmonth])->first();
+        $currentyear = Year::where(['code' => $currentyear])->first();
+
+        $prevmonth = Month::where(['code' => $prevmonth])->first();
+        $prevyear = Year::where(['code' => $prevyear])->first();
+        $yearminus1 = Year::where(['code' => $yearminus1])->first();
+        $yearminus2 = Year::where(['code' => $yearminus2])->first();
+        $yearminus3 = Year::where(['code' => $yearminus3])->first();
+
+        //Tabel 1
+
+        $infcurrent = InflationData::where('month_id', $currentmonth->id)
+            ->where('year_id', $currentyear->id)
+            ->where(function ($query) {
+                $query->where('flag', '=', 1);
+                $query->orWhere('flag', '=', 0);
+            })->get();
+
+        $infprev = InflationData::where('month_id', $prevmonth->id)
+            ->where('year_id', $prevyear->id)
+            ->where(function ($query) {
+                $query->where('flag', '=', 1);
+                $query->orWhere('flag', '=', 0);
+            })->get();
+
+        $infyearminus1 = InflationData::where('month_id', $currentmonth->id)
+            ->where('year_id', $yearminus1->id)
+            ->where(function ($query) {
+                $query->where('flag', '=', 1);
+                $query->orWhere('flag', '=', 0);
+            })->get();
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Tabel 1');
+
+        $sheet->getCell('A1')
+            ->setValue('IHK dan Tingkat Inflasi Kota Probolinggo ' . $currentmonth->name . ' ' . $currentyear->name .
+                ', Tahun Kalender ' . $currentmonth->name . ' ' . $currentyear->name .
+                ', dan Tahun ke Tahun ' . $currentmonth->name . ' ' . $currentyear->name .
+                ' Menurut Kelompok Pengeluaran (2018=100)');
+
+        $sheet->getCell('A3')
+            ->setValue('Kelompok Pengeluaran');
+        $sheet->getCell('B3')
+            ->setValue('IHK ' . $currentmonth->name . ' ' . $yearminus1->name);
+        $sheet->getCell('C3')
+            ->setValue('IHK ' . $prevmonth->name . ' ' . $prevyear->name);
+        $sheet->getCell('D3')
+            ->setValue('IHK ' . $currentmonth->name . ' ' . $currentyear->name);
+        $sheet->getCell('E3')
+            ->setValue('Tingkat Inflasi ' . $currentmonth->name . ' ' . $currentyear->name . ' (%)');
+        $sheet->getCell('F3')
+            ->setValue('Tingkat Inflasi Tahun Kalender ' . $currentyear->name . ' (%)');
+        $sheet->getCell('G3')
+            ->setValue('Tingkat Inflasi Tahun ke Tahun ' . $currentyear->name . ' (%)');
+        $sheet->getCell('H3')
+            ->setValue('Andil Inflasi ' . $currentmonth->name . ' ' . $currentyear->name . ' (%)');
+
+        $i = 4;
+        for ($j = 0; $j < count($infcurrent); $j++) {
+            $sheet->getCell('A' . $i)
+                ->setValue(ucwords(strtolower($infcurrent[$j]->item_name)));
+            if (count($infyearminus1) == 12)
+                $sheet->getCell('B' . $i)
+                    ->setValue($infyearminus1[$j]->IHK);
+            else $sheet->getCell('B' . $i)
+                ->setValue('Data Belum Diupload');
+            $sheet->getCell('C' . $i)
+                ->setValue(Utilities::getFormattedNumber($infprev[$j]->IHK));
+            $sheet->getCell('D' . $i)
+                ->setValue(Utilities::getFormattedNumber($infcurrent[$j]->IHK));
+            $sheet->getCell('E' . $i)
+                ->setValue(Utilities::getFormattedNumber($infcurrent[$j]->INFMOM, 2, false));
+            $sheet->getCell('F' . $i)
+                ->setValue(Utilities::getFormattedNumber($infcurrent[$j]->INFYTD, 2, false));
+            $sheet->getCell('G' . $i)
+                ->setValue(Utilities::getFormattedNumber($infcurrent[$j]->INFYOY, 2, false));
+            $sheet->getCell('H' . $i)
+                ->setValue(Utilities::getFormattedNumber($infcurrent[$j]->ANDILMOM, 4, false));
+
+            $i++;
+        }
+
+        //Tabel 1
+
+        //Tabel 2
+
+        $infcurrent = InflationData::where('month_id', $currentmonth->id)
+            ->where('year_id', $currentyear->id)
+            ->where('flag', 0)->first();
+
+        $infyearminus1 = InflationData::where('month_id', $currentmonth->id)
+            ->where('year_id', $yearminus1->id)
+            ->where('flag', 0)->first();
+
+        $infyearminus2 = InflationData::where('month_id', $currentmonth->id)
+            ->where('year_id', $yearminus2->id)
+            ->where('flag', 0)->first();
+
+        $infarray = collect();
+        $infarray->push($infyearminus2);
+        $infarray->push($infyearminus1);
+        $infarray->push($infcurrent);
+
+        $spreadsheet->createSheet();
+        $spreadsheet->setActiveSheetIndex(1);
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Tabel 2');
+
+        $sheet->getCell('A1')
+            ->setValue('Tingkat Inflasi Bulanan, Tahun Kalender, dan Tahun ke Tahun Kota Probolinggo ' . $yearminus2->name . '-' . $currentyear->name . ' (Persen)');
+
+        $sheet->getCell('A3')
+            ->setValue('Tingkat Inflasi');
+        $sheet->getCell('B3')
+            ->setValue($yearminus2->name);
+        $sheet->getCell('C3')
+            ->setValue($yearminus1->name);
+        $sheet->getCell('D3')
+            ->setValue($currentyear->name);
+
+        $sheet->getCell('A4')
+            ->setValue($currentmonth->name);
+        $sheet->getCell('A5')
+            ->setValue('Tahun Kalender (Januari-' . $currentmonth->name . ')');
+        $sheet->getCell('A6')
+            ->setValue('Tahun ke Tahun (' . $currentmonth->name . ' tahun n terhadap ' . $currentmonth->name . ' tahun n-1)');
+
+        $j = 0;
+        foreach (range('B', 'D') as $v) {
+            $sheet->getCell($v . '4')
+                ->setValue(Utilities::getFormattedNumber($infarray[$j]->INFMOM, 2, false));
+            $sheet->getCell($v . '5')
+                ->setValue(Utilities::getFormattedNumber($infarray[$j]->INFYTD, 2, false));
+            $sheet->getCell($v . '6')
+                ->setValue(Utilities::getFormattedNumber($infarray[$j]->INFYOY, 2, false));
+            $j++;
+        }
+        //Tabel 2
+
+        //Tabel 3
+
+        $infbyarea = InflationDataByArea::where([
+            'month_id' => $currentmonth->id,
+            'year_id' => $currentyear->id,
+        ])->where('area_code', 'LIKE', '35%')->get();
+
+        $spreadsheet->createSheet();
+        $spreadsheet->setActiveSheetIndex(2);
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Tabel 3');
+
+        $sheet->getCell('A1')
+            ->setValue('Perbandingan Indeks dan Tingkat Inflasi ' . $currentmonth->name . ' ' . $currentyear->name . ' Kota-Kota di Jawa Timur dengan Jawa Timur (2018=100)');
+        $sheet->getCell('A3')
+            ->setValue('Kota');
+        $sheet->getCell('B3')
+            ->setValue('IHK');
+        $sheet->getCell('C3')
+            ->setValue('Tingkat Inflasi (%)');
+
+        $j = 4;
+        foreach ($infbyarea as $inf) {
+            $sheet->getCell('A' . $j)
+                ->setValue(ucwords(strtolower($inf->area_name)));
+            $sheet->getCell('B' . $j)
+                ->setValue(Utilities::getFormattedNumber($inf->IHK));
+            $sheet->getCell('C' . $j)
+                ->setValue(Utilities::getFormattedNumber($inf->INFMOM, 2, false));
+            $j++;
+        }
+        //Tabel 3
+
+        //Tabel 4
+        $infbyarea = InflationDataByArea::where([
+            'month_id' => $currentmonth->id,
+            'year_id' => $currentyear->id,
+        ])->where('area_code', 'LIKE', '3%')->get();
+
+        $spreadsheet->createSheet();
+        $spreadsheet->setActiveSheetIndex(3);
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Tabel 4');
+
+        $sheet->getCell('A1')
+            ->setValue('Perbandingan Indeks dan Tingkat Inflasi ' . $currentmonth->name . ' ' . $currentyear->name . ' Kota-Kota di Pulau Jawa dengan Nasional (2018=100)');
+        $sheet->getCell('A3')
+            ->setValue('Kota');
+        $sheet->getCell('B3')
+            ->setValue('IHK');
+        $sheet->getCell('C3')
+            ->setValue('Tingkat Inflasi (%)');
+
+        $j = 4;
+        foreach ($infbyarea as $inf) {
+            $sheet->getCell('A' . $j)
+                ->setValue(ucwords(strtolower($inf->area_name)));
+            $sheet->getCell('B' . $j)
+                ->setValue(Utilities::getFormattedNumber($inf->IHK));
+            $sheet->getCell('C' . $j)
+                ->setValue(Utilities::getFormattedNumber($inf->INFMOM, 2, false));
+            $j++;
+        }
+        //Tabel 4
+
+        //Tabel 5
+        $currentenergyinf = EnergyInflationData::where([
+            'month_id' => $currentmonth->id,
+            'year_id' => $currentyear->id,
+        ])->first();
+        $prevenergyinf = EnergyInflationData::where([
+            'month_id' => $prevmonth->id,
+            'year_id' => $prevyear->id,
+        ])->first();
+
+        $currentfoodinf = FoodInflationData::where([
+            'month_id' => $currentmonth->id,
+            'year_id' => $currentyear->id,
+        ])->first();
+        $prevfoodinf = FoodInflationData::where([
+            'month_id' => $prevmonth->id,
+            'year_id' => $prevyear->id,
+        ])->first();
+
+        $spreadsheet->createSheet();
+        $spreadsheet->setActiveSheetIndex(4);
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Tabel 5');
+
+        $sheet->getCell('A1')
+            ->setValue('Tingkat Inflasi ' . $currentmonth->name . ' ' . $currentyear->name . ', Tahun Kalender ' . $currentyear->name . ', dan Tahun ke Tahun Kota Probolinggo Menurut Kelompok Komponen Energi dan Bahan Makanan');
+        $sheet->getCell('A3')
+            ->setValue('Komponen');
+        $sheet->getCell('B3')
+            ->setValue('IHK ' . $prevmonth->name . ' ' . $prevyear->name);
+        $sheet->getCell('C3')
+            ->setValue('IHK ' . $currentmonth->name . ' ' . $currentyear->name);
+        $sheet->getCell('C3')
+            ->setValue('Tingkat Inflasi (%)');
+        $sheet->getCell('D3')
+            ->setValue('Tingkat Inflasi ' . $currentmonth->name . ' ' . $currentyear->name . ' (%)');
+        $sheet->getCell('E3')
+            ->setValue('Tingkat Inflasi Tahun Kalender ' . $currentmonth->name . ' ' . $currentyear->name . ' (%)');
+        $sheet->getCell('F3')
+            ->setValue('Tingkat Inflasi Tahun ke Tahun ' . $currentmonth->name . ' ' . $currentyear->name . ' (%)');
+        $sheet->getCell('G3')
+            ->setValue('Andil Inflasi ' . $currentmonth->name . ' ' . $currentyear->name . ' (%)');
+
+        $sheet->getCell('A4')
+            ->setValue('Energi');
+        $sheet->getCell('A5')
+            ->setValue('Bahan Makanan');
+        $sheet->getCell('B4')
+            ->setValue(Utilities::getFormattedNumber($prevenergyinf->IHK));
+        $sheet->getCell('B5')
+            ->setValue(Utilities::getFormattedNumber($prevfoodinf->IHK));
+        $sheet->getCell('C4')
+            ->setValue(Utilities::getFormattedNumber($currentenergyinf->IHK));
+        $sheet->getCell('C5')
+            ->setValue(Utilities::getFormattedNumber($currentfoodinf->IHK));
+        $sheet->getCell('D4')
+            ->setValue(Utilities::getFormattedNumber($currentenergyinf->INFMOM, 2, false));
+        $sheet->getCell('D5')
+            ->setValue(Utilities::getFormattedNumber($currentfoodinf->INFMOM, 2, false));
+        $sheet->getCell('E4')
+            ->setValue(Utilities::getFormattedNumber($currentenergyinf->INFYTD, 2, false));
+        $sheet->getCell('E5')
+            ->setValue(Utilities::getFormattedNumber($currentfoodinf->INFYTD, 2, false));
+        $sheet->getCell('F4')
+            ->setValue(Utilities::getFormattedNumber($currentenergyinf->INFYOY, 2, false));
+        $sheet->getCell('F5')
+            ->setValue(Utilities::getFormattedNumber($currentfoodinf->INFYOY, 2, false));
+        $sheet->getCell('G4')
+            ->setValue(Utilities::getFormattedNumber($currentenergyinf->ANDILMOM, 4, false));
+        $sheet->getCell('G5')
+            ->setValue(Utilities::getFormattedNumber($currentfoodinf->ANDILMOM, 4, false));
+
+        //Tabel 5
+
+        header('Content-Type: application/vnd.ms-excel');
+        header('Content-Disposition: attachment;filename="Tabel Inflasi ' . $currentmonth->name . ' ' . $currentyear->name . '.xls"');
+        header('Cache-Control: max-age=0');
+
+        $writer = \PhpOffice\PhpSpreadsheet\IOFactory::createWriter($spreadsheet, 'Xls');
+        $writer->save('php://output');
     }
 }

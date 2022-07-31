@@ -15,6 +15,11 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/', [MainController::class, 'index']);
+Route::get('/generate-table', [MainController::class, 'indexTable']);
+
 Route::get('/upload', [MainController::class, 'showUpload']);
-Route::post('/generate', [MainController::class, 'generate']);
+Route::post('/generate-text', [MainController::class, 'generateText']);
+Route::post('/generate-table', [MainController::class, 'generateTable']);
+Route::post('/generate-info', [MainController::class, 'generateInfographic']);
+
 Route::post('/upload', [MainController::class, 'upload']);

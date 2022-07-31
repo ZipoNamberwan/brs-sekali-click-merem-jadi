@@ -60,10 +60,25 @@
                 <div class="collapse navbar-collapse" id="sidenav-collapse-main">
                     <ul class="navbar-nav">
                         <li class="nav-item">
-                            <a class="nav-link" href="/">
-                                <i class="fas fa-home text-primary"></i>
-                                <span class="nav-link-text">BRS Inflasi Generate</span>
+                            <a class="nav-link" href="#navbar-examples" data-toggle="collapse" role="button" aria-expanded="false" aria-controls="navbar-examples">
+                                <i class="ni ni-app text-orange"></i>
+                                <span class="nav-link-text">Generate BRS Inflasi</span>
                             </a>
+                            <div class="collapse" id="navbar-examples">
+                                <ul class="nav nav-sm flex-column">
+                                    <li class="nav-item">
+                                        <a href="{{url('/')}}" class="nav-link">Teks</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="{{url('/generate-table')}}" class="nav-link">Tabel</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="{{url('/generate-info')}}" class="nav-link">Infografis</a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link" href="/upload">
                                 <i class="fas fa-upload text-primary"></i>
                                 <span class="nav-link-text">Upload</span>

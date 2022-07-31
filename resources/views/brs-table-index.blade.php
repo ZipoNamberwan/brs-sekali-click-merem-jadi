@@ -20,7 +20,7 @@
                         <ol class="breadcrumb breadcrumb-links breadcrumb-dark">
                             <li class="breadcrumb-item"><a href="#"><i class="ni ni-app"></i></a></li>
                             <li class="breadcrumb-item" aria-current="page"><a href="#">Generate BRS</a></li>
-                            <li class="breadcrumb-item active" aria-current="page">Teks</li>
+                            <li class="breadcrumb-item active" aria-current="page">Tabel</li>
                         </ol>
                     </nav>
                 </div>
@@ -46,11 +46,11 @@
                 <div class="card">
                     <!-- Card header -->
                     <div class="card-header">
-                        <h3 class="mb-0">Generate Teks BRS</h3>
+                        <h3 class="mb-0">Generate Tabel BRS</h3>
                     </div>
                     <!-- Card body -->
                     <div class="card-body">
-                        <form autocomplete="off" method="post" action="/generate-text" class="needs-validation" enctype="multipart/form-data" novalidate>
+                        <form autocomplete="off" method="post" action="/generate-table" class="needs-validation" enctype="multipart/form-data" novalidate>
                             @csrf
                             <div class="form-row">
                                 <div class="col-md-4 mb-3">
