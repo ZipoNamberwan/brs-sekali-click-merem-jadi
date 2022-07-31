@@ -65,8 +65,8 @@ class MainController extends Controller
         ]);
 
         $date = Year::find($request->year)->code . '-' . Month::find($request->month)->code . '-01';
-        $currentyear = date('Y', strtotime($date . ' -1 months'));
-        $currentmonth = date('m', strtotime($date . ' -1 months'));
+        $currentyear = date('Y', strtotime($date));
+        $currentmonth = date('m', strtotime($date));
 
         $prevdate = $currentyear . '-' . $currentmonth . '-01';
         $prevyear = date('Y', strtotime($prevdate . ' -1 months'));
@@ -284,7 +284,7 @@ class MainController extends Controller
                         $s[] = 'kelompok ' . strtolower($v->item_name) . ' sebesar ' . Utilities::getFormattedNumber($v->INFMOM) . ' persen';
                     else $s[] = 'kelompok ' . strtolower($v->item_name);
                 }
-                $sentence_group[$key] = Utilities::getSentenceFromArray($s, '; ');
+                $sentence_group[$key] = Utilities::getSentenceFromArray($s, '; ', '; dan ');
             }
 
             $second_pg = ucfirst(Utilities::getInfTypeString($infcurrent->INFMOM)) . ' terjadi karena adanya ' .
@@ -320,7 +320,7 @@ class MainController extends Controller
                         $s[] = 'kelompok ' . strtolower($v->item_name) . ' sebesar ' . Utilities::getFormattedNumber($v->ANDILMOM, 4) . ' persen';
                     else $s[] = 'kelompok ' . strtolower($v->item_name);
                 }
-                $sentence_group[$key] = Utilities::getSentenceFromArray($s, '; ');
+                $sentence_group[$key] = Utilities::getSentenceFromArray($s, '; ', '; dan ');
             }
 
             $fourth_pg = 'Pada ' . $infcurrent->monthdetail->name . ' ' . $infcurrent->yeardetail->name . ' dari '
@@ -454,6 +454,8 @@ class MainController extends Controller
                     }
 
                     $sentence = [];
+                    $domninant_wd = $k->item_code == '01' ? 'dominan' : '';
+
                     foreach ($komoditas_group as $key => $value) {
                         $s = [];
                         foreach ($value as $v) {
@@ -461,7 +463,7 @@ class MainController extends Controller
                         }
                         if ($key == 'inf') {
                             if (count($value) > 1) {
-                                $sentence[] = 'Komoditas yang memberikan andil/sumbangan inflasi, yaitu ' . Utilities::getSentenceFromArray($s);
+                                $sentence[] = 'Komoditas yang ' . $domninant_wd . ' memberikan andil/sumbangan inflasi, yaitu ' . Utilities::getSentenceFromArray($s);
                             } else if (count($value)  == 1) {
                                 $sentence[] = 'Satu-satunya komoditas yang memberikan andil/sumbangan inflasi, yaitu ' . Utilities::getSentenceFromArray($s);
                             } else {
@@ -469,7 +471,7 @@ class MainController extends Controller
                             }
                         } else if ($key == 'def') {
                             if (count($value) > 1) {
-                                $sentence[] = 'Komoditas yang memberikan andil/sumbangan deflasi, yaitu ' . Utilities::getSentenceFromArray($s);
+                                $sentence[] = 'Komoditas yang ' . $domninant_wd . ' memberikan andil/sumbangan deflasi, yaitu ' . Utilities::getSentenceFromArray($s);
                             } else if (count($value)  == 1) {
                                 $sentence[] = 'Satu-satunya komoditas yang memberikan andil/sumbangan deflasi, yaitu ' . Utilities::getSentenceFromArray($s);
                             } else {
@@ -532,6 +534,8 @@ class MainController extends Controller
                     $area_sentence[$key][] = Utilities::getAreaType($jatimarea[$key][$i]->area_code) . ' ' . ucfirst(strtolower($jatimarea[$key][$i]->area_name)) . ' sebesar ' . Utilities::getFormattedNumber($jatimarea[$key][$i]->INFMOM);
                 }
             }
+            // dd($jatimarea);
+
             $sentence =
                 'Dari ' . (count($jatimarea['inf']) + count($jatimarea['def'])) . ' kota IHK di Jawa Timur, ' .
                 (count($jatimarea['inf']) > 0 ? ((count($jatimarea['inf']) == (count($jatimarea['inf']) + count($jatimarea['def'])) ? 'seluruh' : (count($jatimarea['inf']))) . ' kota mengalami inflasi') : '') .
