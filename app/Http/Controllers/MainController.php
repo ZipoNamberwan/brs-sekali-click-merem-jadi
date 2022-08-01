@@ -12,10 +12,14 @@ use App\Models\InflationData;
 use App\Models\InflationDataByArea;
 use App\Models\Month;
 use App\Models\Year;
+use DateInterval;
+use DatePeriod;
+use DateTime;
 use Exception;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use Intervention\Image\Facades\Image;
 
 class MainController extends Controller
 {
@@ -42,6 +46,21 @@ class MainController extends Controller
         $years = Year::all();
 
         return view('brs-table-index', [
+            'months' => $months,
+            'years' => $years,
+            'currentmonth' => $currentmonth,
+            'currentyear' => $currentyear
+        ]);
+    }
+
+    public function indexInfographic()
+    {
+        $currentmonth = Month::where(['code' => date('m')])->first()->id;
+        $currentyear = Year::where(['code' => date('Y')])->first()->id;
+        $months = Month::all();
+        $years = Year::all();
+
+        return view('brs-info-index', [
             'months' => $months,
             'years' => $years,
             'currentmonth' => $currentmonth,
@@ -680,7 +699,7 @@ class MainController extends Controller
                 ' komponen energi untuk tahun kalender ' . $energyinflation->monthdetail->name . ' ' . $energyinflation->yeardetail->name . ' sebesar ' . Utilities::getFormattedNumber($energyinflation->INFYTD) .
                 ' persen dan ' . Utilities::getInfTypeString($energyinflation->INFYTD) . ' tahun ke tahun (' . $energyinflation->monthdetail->name . ' ' . $energyinflation->yeardetail->name .
                 ' terhadap ' . $energyinflation->monthdetail->name . ' ' . $yearminus1->name . ') sebesar ' . Utilities::getFormattedNumber($energyinflation->INFYOY) . ' persen. ' .
-                $last_sentence . ' (lihat Tabel 6)';
+                $last_sentence . ' (Lihat Tabel 6)';
 
             $result['Inflasi Komponen Energi'] = $sentence;
             //Bab 4
@@ -714,7 +733,7 @@ class MainController extends Controller
                 ' bahan makanan untuk tahun kalender ' . $foodinflation->monthdetail->name . ' ' . $foodinflation->yeardetail->name . ' sebesar ' . Utilities::getFormattedNumber($foodinflation->INFYTD) .
                 ' persen dan ' . Utilities::getInfTypeString($foodinflation->INFYTD) . ' tahun ke tahun (' . $foodinflation->monthdetail->name . ' ' . $foodinflation->yeardetail->name .
                 ' terhadap ' . $foodinflation->monthdetail->name . ' ' . $yearminus1->name . ') sebesar ' . Utilities::getFormattedNumber($foodinflation->INFYOY) . ' persen. ' .
-                $last_sentence . ' (lihat Tabel 6)';
+                $last_sentence . ' (Lihat Tabel 6)';
 
             $result['Inflasi Bahan Makanan'] = $sentence;
             //Bab 5
@@ -1036,5 +1055,324 @@ class MainController extends Controller
 
         $writer = \PhpOffice\PhpSpreadsheet\IOFactory::createWriter($spreadsheet, 'Xls');
         $writer->save('php://output');
+    }
+
+    public function generateInfographic(Request $request)
+    {
+        // $request->validate([
+        //     'brsno' => 'required',
+        //     'month' => 'required',
+        //     'year' => 'required',
+        // ]);
+
+        // $date = Year::find($request->year)->code . '-' . Month::find($request->month)->code . '-01';
+        $date = Year::find('4')->code . '-' . Month::find('6')->code . '-01';
+        $currentyear = date('Y', strtotime($date));
+        $currentmonth = date('m', strtotime($date));
+
+        $yoyyear = date('Y', strtotime($date . ' -12 months'));
+        $yoymonth = date('m', strtotime($date . ' -12 months'));
+
+        $currentmonth = Month::where(['code' => $currentmonth])->first();
+        $currentyear = Year::where(['code' => $currentyear])->first();
+
+        $yoymonth = Month::where(['code' => $yoymonth])->first();
+        $yoyyear = Year::where(['code' => $yoyyear])->first();
+
+        $infcurrent = InflationData::where([
+            'month_id' => $currentmonth->id,
+            'year_id' => $currentyear->id,
+            'flag' => 0
+        ])->first();
+
+        $color = [
+            'blue' => '#0c588f',
+            'green' => '#8cc63f',
+            'yellow' => '#fcdf05',
+            'black' => '#000000',
+            'red' => '#FF0000'
+        ];
+
+        $img = Image::make('template/brs.png');
+
+        $img->text(strtoupper($infcurrent->monthdetail->name) . ' ' . $infcurrent->yeardetail->name, 1310, 440, function ($font) use ($color) {
+            $font->file(public_path('assets/fonts/metropolis/Metropolis-Bold.otf'));
+            $font->size(110);
+            $font->color($color['blue']);
+        });
+
+        $img->text('No. 09/07/3574/Th. XXII, 1 Juli 2022', 660, 510, function ($font) use ($color) {
+            $font->file(public_path('assets/fonts/metropolis/Metropolis-Regular.otf'));
+            $font->size(45);
+            $font->color($color['black']);
+        });
+
+        $img->text(strtoupper($infcurrent->monthdetail->name) . ' ' . $infcurrent->yeardetail->name, 132, 660, function ($font) use ($color) {
+            $font->file(public_path('assets/fonts/metropolis/Metropolis-Regular.otf'));
+            $font->size(40);
+            $font->color($color['yellow']);
+        });
+
+        $img->text(Utilities::getFormattedNumber($infcurrent->INFMOM), 720, 765, function ($font) use ($color) {
+            $font->file(public_path('assets/fonts/metropolis/Metropolis-Bold.otf'));
+            $font->size(90);
+            $font->color($color['yellow']);
+            $font->align('right');
+        });
+
+        $img->text(Utilities::getFormattedNumber($infcurrent->INFYTD), 1485, 765, function ($font) use ($color) {
+            $font->file(public_path('assets/fonts/metropolis/Metropolis-Bold.otf'));
+            $font->size(90);
+            $font->color($color['yellow']);
+            $font->align('right');
+        });
+
+        $img->text(Utilities::getFormattedNumber($infcurrent->INFYOY), 2285, 765, function ($font) use ($color) {
+            $font->file(public_path('assets/fonts/metropolis/Metropolis-Bold.otf'));
+            $font->size(90);
+            $font->color($color['yellow']);
+            $font->align('right');
+        });
+
+        $img->text('%', 742, 720, function ($font) use ($color) {
+            $font->file(public_path('assets/fonts/metropolis/Metropolis-Regular.otf'));
+            $font->size(70);
+            $font->color($color['yellow']);
+        });
+        $img->text('%', 1510, 720, function ($font) use ($color) {
+            $font->file(public_path('assets/fonts/metropolis/Metropolis-Regular.otf'));
+            $font->size(70);
+            $font->color($color['yellow']);
+        });
+        $img->text('%', 2315, 720, function ($font) use ($color) {
+            $font->file(public_path('assets/fonts/metropolis/Metropolis-Regular.otf'));
+            $font->size(70);
+            $font->color($color['yellow']);
+        });
+
+        $end = new DateTime($currentyear->code . '-' . $currentmonth->code . '-30');
+        $begin = new DateTime($yoyyear->code . '-' . $yoymonth->code . '-01');
+        $interval = DateInterval::createFromDateString('1 month');
+
+        $period = new DatePeriod($begin, $interval, $end);
+
+        $coordinates = [];
+        $yearscount = [];
+
+        $infarray = collect();
+        foreach ($period as $dt) {
+            $month = Month::where(['code' => $dt->format("m")])->first();
+            $year = Year::where(['code' => $dt->format("Y")])->first();
+            $inf = InflationData::where([
+                'month_id' => $month->id,
+                'year_id' => $year->id,
+                'flag' => 0
+            ])->first();
+            $infarray->push($inf);
+
+            $yearscount[$dt->format("Y")] = 0;
+        }
+
+        foreach ($period as $dt) {
+            $yearscount[$dt->format("Y")]++;
+        }
+
+        $max = $infarray->max('INFMOM');
+        $min = $infarray->min('INFMOM');
+
+        $maxycoordinate = 900;
+        $minycoordinate = 1100;
+
+        $grad = ($minycoordinate - $maxycoordinate) / ((float)$min - (float)$max);
+        $const = $minycoordinate - $grad * (float)$min;
+
+        $startxcoordinate = 200;
+        $intervalxcoordinate = 174;
+
+        $tempstartxcoordinate = $startxcoordinate;
+
+        foreach ($infarray as $inf) {
+            $coordinate = [];
+
+            $coordinate['y'] = (int)($grad * ($inf != null ? $inf->INFMOM : 0) + $const);
+            $coordinate['x'] = (int)($tempstartxcoordinate);
+            $coordinate['isnull'] = $inf == null;
+            $coordinate['value'] = $inf;
+
+            $tempstartxcoordinate += $intervalxcoordinate;
+
+            $coordinates[] = $coordinate;
+        }
+
+        $ycoordinatezero = (int)($const);
+
+        $img->save('template/brs_result.png');
+
+        $imggd = imagecreatefrompng('template/brs_result.png');
+        $green = imagecolorallocate($imggd, 140, 198, 63);
+        $blue = imagecolorallocate($imggd, 12, 88, 143);
+
+        // Set the thickness of the line
+        imagesetthickness($imggd, 1);
+
+        imageline(
+            $imggd,
+            150,
+            $ycoordinatezero,
+            $intervalxcoordinate * 13 + 50,
+            $ycoordinatezero,
+            $blue
+        );
+
+        imagesetthickness($imggd, 25);
+
+        for ($i = 0; $i < count($coordinates); $i++) {
+            if ($i > 0) {
+                imageline(
+                    $imggd,
+                    $coordinates[$i - 1]['x'],
+                    $coordinates[$i - 1]['y'],
+                    $coordinates[$i]['x'],
+                    $coordinates[$i]['y'],
+                    ($i % 2) == 0 ? $blue : $green
+                );
+            }
+            if ($coordinates[$i]['value'] != null) {
+                if ($coordinates[$i]['value']->monthdetail->id == 12 && $i != (count($coordinates) - 1)) {
+                    imagesetthickness($imggd, 5);
+                    imageline(
+                        $imggd,
+                        $coordinates[$i]['x'] + $intervalxcoordinate / 2,
+                        1230,
+                        $coordinates[$i]['x'] + $intervalxcoordinate / 2,
+                        1135,
+                        $blue
+                    );
+                    imagesetthickness($imggd, 25);
+                }
+            }
+        }
+
+        imagepng($imggd, 'template/brs_result.png');
+
+        $img = Image::make('template/brs_result.png');
+
+        for ($i = 0; $i < count($coordinates); $i++) {
+            $img->text(
+                $coordinates[$i]['value'] != null ?
+                    Utilities::getFormattedNumber($coordinates[$i]['value']->INFMOM, 2, false) : 0,
+                $coordinates[$i]['x'],
+                $coordinates[$i]['y'] - 50,
+                function ($font) use ($color, $coordinates, $i) {
+                    $font->file(public_path('assets/fonts/metropolis/Metropolis-Bold.otf'));
+                    $font->size(50);
+                    $font->color($coordinates[$i]['value'] != null ? $color['blue'] : $color['red']);
+                    $font->align('center');
+                }
+            );
+            $c = ($i % 2) == 0 ? $color['blue'] : $color['green'];
+            $img->circle(
+                30,
+                $coordinates[$i]['x'],
+                $coordinates[$i]['y'],
+                function ($draw) use ($c, $i, $color) {
+                    $draw->background($i != 0 ? $c : $color['green']);
+                }
+            );
+            $img->text(
+                $coordinates[$i]['value'] != null ?
+                    substr($coordinates[$i]['value']->monthdetail->name, 0, 3) . ' ' . substr($coordinates[$i]['value']->yeardetail->name, 2, 2) : 'Na',
+                $coordinates[$i]['x'],
+                $minycoordinate + 70,
+                function ($font) use ($color) {
+                    $font->file(public_path('assets/fonts/metropolis/Metropolis-Regular.otf'));
+                    $font->size(30);
+                    $font->color($color['blue']);
+                    $font->align('center');
+                    $font->valign('bottom');
+                }
+            );
+        }
+
+        $tempstartxcoordinate = $startxcoordinate;
+        foreach ($yearscount as $year => $value) {
+            $tempstartxcoordinate = $tempstartxcoordinate + ($intervalxcoordinate * $value);
+            $img->text(
+                $year . ' (2018=100)',
+                $tempstartxcoordinate - ($intervalxcoordinate * $value) / 2,
+                $minycoordinate + 130,
+                function ($font) use ($color) {
+                    $font->file(public_path('assets/fonts/metropolis/Metropolis-Regular.otf'));
+                    $font->size(25);
+                    $font->color($color['blue']);
+                    $font->align('center');
+                    $font->valign('bottom');
+                }
+            );
+        }
+
+        $infcurrent = InflationData::where([
+            'month_id' => $currentmonth->id,
+            'year_id' => $currentyear->id,
+            'flag' => 1
+        ])->get();
+
+        $graphbarcoordinates = [];
+
+        $max = $infcurrent->max('ANDILMOM');
+        $min = $infcurrent->min('ANDILMOM');
+
+        $maxycoordinate = 1750;
+        $minycoordinate = 2330;
+
+        $grad = ($minycoordinate - $maxycoordinate) / ((float)$min - (float)$max);
+        $const = $minycoordinate - $grad * (float)$min;
+
+        $startxcoordinate = 290;
+        $intervalxcoordinate = 196;
+        $graphbarwidth = $intervalxcoordinate - 20;
+
+        $tempstartxcoordinate = $startxcoordinate;
+
+        foreach ($infcurrent as $inf) {
+            $coordinate = [];
+            $coordinate['y'] = (int)($grad * ($inf != null ? $inf->ANDILMOM : 0) + $const);
+            $coordinate['x'] = (int)($tempstartxcoordinate);
+            $coordinate['value'] = $inf;
+            $tempstartxcoordinate += $intervalxcoordinate;
+            $graphbarcoordinates[] = $coordinate;
+        }
+
+        $ycoordinatezero = (int)($const);
+
+        for ($i = 0; $i < count($graphbarcoordinates); $i++) {
+            $img->rectangle(
+                $graphbarcoordinates[$i]['x'] - $graphbarwidth / 2,
+                $graphbarcoordinates[$i]['y'],
+                $graphbarcoordinates[$i]['x'] + $graphbarwidth / 2,
+                $ycoordinatezero,
+                function ($draw) use ($color, $graphbarcoordinates, $i) {
+                    $draw->background($graphbarcoordinates[$i]['value']->ANDILMOM >= 0 ? $color['blue'] : $color['green']);
+                }
+            );
+
+            $img->text(
+                Utilities::getFormattedNumber($graphbarcoordinates[$i]['value']->ANDILMOM, 4, false) . '%',
+                $graphbarcoordinates[$i]['x'],
+                $graphbarcoordinates[$i]['y'] - 30,
+                function ($font) use ($color) {
+                    $font->file(public_path('assets/fonts/metropolis/Metropolis-Bold.otf'));
+                    $font->size(35);
+                    $font->color($color['blue']);
+                    $font->align('center');
+                    $font->valign('bottom');
+                }
+            );
+        }
+
+        $img->save('template/brs_result.png');
+
+
+        return 'done';
     }
 }
