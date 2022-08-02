@@ -17,6 +17,7 @@ use DatePeriod;
 use DateTime;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use Intervention\Image\Facades\Image;
@@ -1059,14 +1060,14 @@ class MainController extends Controller
 
     public function generateInfographic(Request $request)
     {
-        // $request->validate([
-        //     'brsno' => 'required',
-        //     'month' => 'required',
-        //     'year' => 'required',
-        // ]);
+        $request->validate([
+            'brsno' => 'required',
+            'month' => 'required',
+            'year' => 'required',
+        ]);
 
-        // $date = Year::find($request->year)->code . '-' . Month::find($request->month)->code . '-01';
-        $date = Year::find('4')->code . '-' . Month::find('6')->code . '-01';
+        $date = Year::find($request->year)->code . '-' . Month::find($request->month)->code . '-01';
+        // $date = Year::find('4')->code . '-' . Month::find('7')->code . '-01';
         $currentyear = date('Y', strtotime($date));
         $currentmonth = date('m', strtotime($date));
 
@@ -1085,294 +1086,528 @@ class MainController extends Controller
             'flag' => 0
         ])->first();
 
-        $color = [
-            'blue' => '#0c588f',
-            'green' => '#8cc63f',
-            'yellow' => '#fcdf05',
-            'black' => '#000000',
-            'red' => '#FF0000'
-        ];
-
-        $img = Image::make('template/brs.png');
-
-        $img->text(strtoupper($infcurrent->monthdetail->name) . ' ' . $infcurrent->yeardetail->name, 1310, 440, function ($font) use ($color) {
-            $font->file(public_path('assets/fonts/metropolis/Metropolis-Bold.otf'));
-            $font->size(110);
-            $font->color($color['blue']);
-        });
-
-        $img->text('No. 09/07/3574/Th. XXII, 1 Juli 2022', 660, 510, function ($font) use ($color) {
-            $font->file(public_path('assets/fonts/metropolis/Metropolis-Regular.otf'));
-            $font->size(45);
-            $font->color($color['black']);
-        });
-
-        $img->text(strtoupper($infcurrent->monthdetail->name) . ' ' . $infcurrent->yeardetail->name, 132, 660, function ($font) use ($color) {
-            $font->file(public_path('assets/fonts/metropolis/Metropolis-Regular.otf'));
-            $font->size(40);
-            $font->color($color['yellow']);
-        });
-
-        $img->text(Utilities::getFormattedNumber($infcurrent->INFMOM), 720, 765, function ($font) use ($color) {
-            $font->file(public_path('assets/fonts/metropolis/Metropolis-Bold.otf'));
-            $font->size(90);
-            $font->color($color['yellow']);
-            $font->align('right');
-        });
-
-        $img->text(Utilities::getFormattedNumber($infcurrent->INFYTD), 1485, 765, function ($font) use ($color) {
-            $font->file(public_path('assets/fonts/metropolis/Metropolis-Bold.otf'));
-            $font->size(90);
-            $font->color($color['yellow']);
-            $font->align('right');
-        });
-
-        $img->text(Utilities::getFormattedNumber($infcurrent->INFYOY), 2285, 765, function ($font) use ($color) {
-            $font->file(public_path('assets/fonts/metropolis/Metropolis-Bold.otf'));
-            $font->size(90);
-            $font->color($color['yellow']);
-            $font->align('right');
-        });
-
-        $img->text('%', 742, 720, function ($font) use ($color) {
-            $font->file(public_path('assets/fonts/metropolis/Metropolis-Regular.otf'));
-            $font->size(70);
-            $font->color($color['yellow']);
-        });
-        $img->text('%', 1510, 720, function ($font) use ($color) {
-            $font->file(public_path('assets/fonts/metropolis/Metropolis-Regular.otf'));
-            $font->size(70);
-            $font->color($color['yellow']);
-        });
-        $img->text('%', 2315, 720, function ($font) use ($color) {
-            $font->file(public_path('assets/fonts/metropolis/Metropolis-Regular.otf'));
-            $font->size(70);
-            $font->color($color['yellow']);
-        });
-
-        $end = new DateTime($currentyear->code . '-' . $currentmonth->code . '-30');
-        $begin = new DateTime($yoyyear->code . '-' . $yoymonth->code . '-01');
-        $interval = DateInterval::createFromDateString('1 month');
-
-        $period = new DatePeriod($begin, $interval, $end);
-
-        $coordinates = [];
-        $yearscount = [];
-
-        $infarray = collect();
-        foreach ($period as $dt) {
-            $month = Month::where(['code' => $dt->format("m")])->first();
-            $year = Year::where(['code' => $dt->format("Y")])->first();
-            $inf = InflationData::where([
-                'month_id' => $month->id,
-                'year_id' => $year->id,
-                'flag' => 0
-            ])->first();
-            $infarray->push($inf);
-
-            $yearscount[$dt->format("Y")] = 0;
-        }
-
-        foreach ($period as $dt) {
-            $yearscount[$dt->format("Y")]++;
-        }
-
-        $max = $infarray->max('INFMOM');
-        $min = $infarray->min('INFMOM');
-
-        $maxycoordinate = 900;
-        $minycoordinate = 1100;
-
-        $grad = ($minycoordinate - $maxycoordinate) / ((float)$min - (float)$max);
-        $const = $minycoordinate - $grad * (float)$min;
-
-        $startxcoordinate = 200;
-        $intervalxcoordinate = 174;
-
-        $tempstartxcoordinate = $startxcoordinate;
-
-        foreach ($infarray as $inf) {
-            $coordinate = [];
-
-            $coordinate['y'] = (int)($grad * ($inf != null ? $inf->INFMOM : 0) + $const);
-            $coordinate['x'] = (int)($tempstartxcoordinate);
-            $coordinate['isnull'] = $inf == null;
-            $coordinate['value'] = $inf;
-
-            $tempstartxcoordinate += $intervalxcoordinate;
-
-            $coordinates[] = $coordinate;
-        }
-
-        $ycoordinatezero = (int)($const);
-
-        $img->save('template/brs_result.png');
-
-        $imggd = imagecreatefrompng('template/brs_result.png');
-        $green = imagecolorallocate($imggd, 140, 198, 63);
-        $blue = imagecolorallocate($imggd, 12, 88, 143);
-
-        // Set the thickness of the line
-        imagesetthickness($imggd, 1);
-
-        imageline(
-            $imggd,
-            150,
-            $ycoordinatezero,
-            $intervalxcoordinate * 13 + 50,
-            $ycoordinatezero,
-            $blue
-        );
-
-        imagesetthickness($imggd, 25);
-
-        for ($i = 0; $i < count($coordinates); $i++) {
-            if ($i > 0) {
-                imageline(
-                    $imggd,
-                    $coordinates[$i - 1]['x'],
-                    $coordinates[$i - 1]['y'],
-                    $coordinates[$i]['x'],
-                    $coordinates[$i]['y'],
-                    ($i % 2) == 0 ? $blue : $green
-                );
-            }
-            if ($coordinates[$i]['value'] != null) {
-                if ($coordinates[$i]['value']->monthdetail->id == 12 && $i != (count($coordinates) - 1)) {
-                    imagesetthickness($imggd, 5);
-                    imageline(
-                        $imggd,
-                        $coordinates[$i]['x'] + $intervalxcoordinate / 2,
-                        1230,
-                        $coordinates[$i]['x'] + $intervalxcoordinate / 2,
-                        1135,
-                        $blue
-                    );
-                    imagesetthickness($imggd, 25);
-                }
-            }
-        }
-
-        imagepng($imggd, 'template/brs_result.png');
-
-        $img = Image::make('template/brs_result.png');
-
-        for ($i = 0; $i < count($coordinates); $i++) {
-            $img->text(
-                $coordinates[$i]['value'] != null ?
-                    Utilities::getFormattedNumber($coordinates[$i]['value']->INFMOM, 2, false) : 0,
-                $coordinates[$i]['x'],
-                $coordinates[$i]['y'] - 50,
-                function ($font) use ($color, $coordinates, $i) {
-                    $font->file(public_path('assets/fonts/metropolis/Metropolis-Bold.otf'));
-                    $font->size(50);
-                    $font->color($coordinates[$i]['value'] != null ? $color['blue'] : $color['red']);
-                    $font->align('center');
-                }
-            );
-            $c = ($i % 2) == 0 ? $color['blue'] : $color['green'];
-            $img->circle(
-                30,
-                $coordinates[$i]['x'],
-                $coordinates[$i]['y'],
-                function ($draw) use ($c, $i, $color) {
-                    $draw->background($i != 0 ? $c : $color['green']);
-                }
-            );
-            $img->text(
-                $coordinates[$i]['value'] != null ?
-                    substr($coordinates[$i]['value']->monthdetail->name, 0, 3) . ' ' . substr($coordinates[$i]['value']->yeardetail->name, 2, 2) : 'Na',
-                $coordinates[$i]['x'],
-                $minycoordinate + 70,
-                function ($font) use ($color) {
-                    $font->file(public_path('assets/fonts/metropolis/Metropolis-Regular.otf'));
-                    $font->size(30);
-                    $font->color($color['blue']);
-                    $font->align('center');
-                    $font->valign('bottom');
-                }
-            );
-        }
-
-        $tempstartxcoordinate = $startxcoordinate;
-        foreach ($yearscount as $year => $value) {
-            $tempstartxcoordinate = $tempstartxcoordinate + ($intervalxcoordinate * $value);
-            $img->text(
-                $year . ' (2018=100)',
-                $tempstartxcoordinate - ($intervalxcoordinate * $value) / 2,
-                $minycoordinate + 130,
-                function ($font) use ($color) {
-                    $font->file(public_path('assets/fonts/metropolis/Metropolis-Regular.otf'));
-                    $font->size(25);
-                    $font->color($color['blue']);
-                    $font->align('center');
-                    $font->valign('bottom');
-                }
-            );
-        }
-
-        $infcurrent = InflationData::where([
+        $infcurrentbygroup = InflationData::where([
             'month_id' => $currentmonth->id,
             'year_id' => $currentyear->id,
             'flag' => 1
         ])->get();
 
-        $graphbarcoordinates = [];
+        $infbyarea = InflationDataByArea::where([
+            'month_id' => $currentmonth->id,
+            'year_id' => $currentyear->id
+        ])->get();
 
-        $max = $infcurrent->max('ANDILMOM');
-        $min = $infcurrent->min('ANDILMOM');
+        if ($infcurrent != null && count($infcurrentbygroup) > 0 && count($infbyarea) > 0) {
+            $color = [
+                'blue' => '#0c588f',
+                'green' => '#8cc63f',
+                'yellow' => '#fcdf05',
+                'black' => '#000000',
+                'red' => '#FF0000',
+                'white' => '#FFFFFF'
+            ];
 
-        $maxycoordinate = 1750;
-        $minycoordinate = 2330;
+            $img = Image::make('template/brs.png');
 
-        $grad = ($minycoordinate - $maxycoordinate) / ((float)$min - (float)$max);
-        $const = $minycoordinate - $grad * (float)$min;
+            $img->text(strtoupper($infcurrent->monthdetail->name) . ' ' . $infcurrent->yeardetail->name, 1310, 440, function ($font) use ($color) {
+                $font->file(public_path('assets/fonts/metropolis/Metropolis-Bold.otf'));
+                $font->size(110);
+                $font->color($color['blue']);
+            });
 
-        $startxcoordinate = 290;
-        $intervalxcoordinate = 196;
-        $graphbarwidth = $intervalxcoordinate - 20;
+            $img->text($request->brsno, 660, 510, function ($font) use ($color) {
+                $font->file(public_path('assets/fonts/metropolis/Metropolis-Regular.otf'));
+                $font->size(45);
+                $font->color($color['black']);
+            });
 
-        $tempstartxcoordinate = $startxcoordinate;
+            $img->text(strtoupper($infcurrent->monthdetail->name) . ' ' . $infcurrent->yeardetail->name, 132, 660, function ($font) use ($color) {
+                $font->file(public_path('assets/fonts/metropolis/Metropolis-Regular.otf'));
+                $font->size(40);
+                $font->color($color['yellow']);
+            });
 
-        foreach ($infcurrent as $inf) {
-            $coordinate = [];
-            $coordinate['y'] = (int)($grad * ($inf != null ? $inf->ANDILMOM : 0) + $const);
-            $coordinate['x'] = (int)($tempstartxcoordinate);
-            $coordinate['value'] = $inf;
-            $tempstartxcoordinate += $intervalxcoordinate;
-            $graphbarcoordinates[] = $coordinate;
-        }
+            $img->text(Utilities::getFormattedNumber($infcurrent->INFMOM), 720, 765, function ($font) use ($color) {
+                $font->file(public_path('assets/fonts/metropolis/Metropolis-Bold.otf'));
+                $font->size(90);
+                $font->color($color['yellow']);
+                $font->align('right');
+            });
 
-        $ycoordinatezero = (int)($const);
+            $img->text(Utilities::getFormattedNumber($infcurrent->INFYTD), 1485, 765, function ($font) use ($color) {
+                $font->file(public_path('assets/fonts/metropolis/Metropolis-Bold.otf'));
+                $font->size(90);
+                $font->color($color['yellow']);
+                $font->align('right');
+            });
 
-        for ($i = 0; $i < count($graphbarcoordinates); $i++) {
+            $img->text(Utilities::getFormattedNumber($infcurrent->INFYOY), 2285, 765, function ($font) use ($color) {
+                $font->file(public_path('assets/fonts/metropolis/Metropolis-Bold.otf'));
+                $font->size(90);
+                $font->color($color['yellow']);
+                $font->align('right');
+            });
+
+            $img->text('%', 742, 720, function ($font) use ($color) {
+                $font->file(public_path('assets/fonts/metropolis/Metropolis-Regular.otf'));
+                $font->size(70);
+                $font->color($color['yellow']);
+            });
+            $img->text('%', 1510, 720, function ($font) use ($color) {
+                $font->file(public_path('assets/fonts/metropolis/Metropolis-Regular.otf'));
+                $font->size(70);
+                $font->color($color['yellow']);
+            });
+            $img->text('%', 2315, 720, function ($font) use ($color) {
+                $font->file(public_path('assets/fonts/metropolis/Metropolis-Regular.otf'));
+                $font->size(70);
+                $font->color($color['yellow']);
+            });
+
             $img->rectangle(
-                $graphbarcoordinates[$i]['x'] - $graphbarwidth / 2,
-                $graphbarcoordinates[$i]['y'],
-                $graphbarcoordinates[$i]['x'] + $graphbarwidth / 2,
-                $ycoordinatezero,
-                function ($draw) use ($color, $graphbarcoordinates, $i) {
-                    $draw->background($graphbarcoordinates[$i]['value']->ANDILMOM >= 0 ? $color['blue'] : $color['green']);
+                123,
+                684,
+                444,
+                765,
+                function ($draw) use ($color) {
+                    $draw->background($color['blue']);
+                }
+            );
+
+            $img->rectangle(
+                867,
+                684,
+                1206,
+                765,
+                function ($draw) use ($color) {
+                    $draw->background($color['blue']);
+                }
+            );
+
+            $img->rectangle(
+                1650,
+                684,
+                1980,
+                765,
+                function ($draw) use ($color) {
+                    $draw->background($color['blue']);
                 }
             );
 
             $img->text(
-                Utilities::getFormattedNumber($graphbarcoordinates[$i]['value']->ANDILMOM, 4, false) . '%',
-                $graphbarcoordinates[$i]['x'],
-                $graphbarcoordinates[$i]['y'] - 30,
+                strtoupper(Utilities::getInfTypeString($infcurrent->INFMOM)),
+                130,
+                750,
                 function ($font) use ($color) {
                     $font->file(public_path('assets/fonts/metropolis/Metropolis-Bold.otf'));
-                    $font->size(35);
-                    $font->color($color['blue']);
-                    $font->align('center');
-                    $font->valign('bottom');
+                    $font->size(80);
+                    $font->color($color['yellow']);
                 }
             );
+
+            $img->text(
+                strtoupper(Utilities::getInfTypeString($infcurrent->INFYTD)),
+                877,
+                750,
+                function ($font) use ($color) {
+                    $font->file(public_path('assets/fonts/metropolis/Metropolis-Bold.otf'));
+                    $font->size(80);
+                    $font->color($color['yellow']);
+                }
+            );
+
+            $img->text(
+                strtoupper(Utilities::getInfTypeString($infcurrent->INFYOY)),
+                1660,
+                750,
+                function ($font) use ($color) {
+                    $font->file(public_path('assets/fonts/metropolis/Metropolis-Bold.otf'));
+                    $font->size(80);
+                    $font->color($color['yellow']);
+                }
+            );
+
+            $end = new DateTime($currentyear->code . '-' . $currentmonth->code . '-15');
+            $begin = new DateTime($yoyyear->code . '-' . $yoymonth->code . '-01');
+            $interval = DateInterval::createFromDateString('1 month');
+
+            $period = new DatePeriod($begin, $interval, $end);
+
+            $coordinates = [];
+            $yearscount = [];
+
+            $infarray = collect();
+            foreach ($period as $dt) {
+                $month = Month::where(['code' => $dt->format("m")])->first();
+                $year = Year::where(['code' => $dt->format("Y")])->first();
+                $inf = InflationData::where([
+                    'month_id' => $month->id,
+                    'year_id' => $year->id,
+                    'flag' => 0
+                ])->first();
+                $infarray->push($inf);
+
+                $yearscount[$dt->format("Y")] = 0;
+            }
+
+            foreach ($period as $dt) {
+                $yearscount[$dt->format("Y")]++;
+            }
+
+            $max = $infarray->max('INFMOM');
+            $min = $infarray->min('INFMOM');
+
+            $maxycoordinate = 900;
+            $minycoordinate = 1100;
+
+            $grad = ($minycoordinate - $maxycoordinate) / ((float)$min - (float)$max);
+            $const = $minycoordinate - $grad * (float)$min;
+
+            $startxcoordinate = 200;
+            $intervalxcoordinate = 174;
+
+            $tempstartxcoordinate = $startxcoordinate;
+
+            foreach ($infarray as $inf) {
+                $coordinate = [];
+
+                $coordinate['y'] = (int)($grad * ($inf != null ? $inf->INFMOM : 0) + $const);
+                $coordinate['x'] = (int)($tempstartxcoordinate);
+                $coordinate['isnull'] = $inf == null;
+                $coordinate['value'] = $inf;
+
+                $tempstartxcoordinate += $intervalxcoordinate;
+
+                $coordinates[] = $coordinate;
+            }
+
+            $ycoordinatezero = (int)($const);
+
+            $img->save('template/brs_result.png');
+
+            $imggd = imagecreatefrompng('template/brs_result.png');
+            $green = imagecolorallocate($imggd, 140, 198, 63);
+            $blue = imagecolorallocate($imggd, 12, 88, 143);
+
+            // Set the thickness of the line
+            imagesetthickness($imggd, 1);
+
+            imageline(
+                $imggd,
+                150,
+                $ycoordinatezero,
+                $intervalxcoordinate * 13 + 50,
+                $ycoordinatezero,
+                $blue
+            );
+
+            imagesetthickness($imggd, 25);
+
+            for ($i = 0; $i < count($coordinates); $i++) {
+                if ($i > 0) {
+                    imageline(
+                        $imggd,
+                        $coordinates[$i - 1]['x'],
+                        $coordinates[$i - 1]['y'],
+                        $coordinates[$i]['x'],
+                        $coordinates[$i]['y'],
+                        ($i % 2) == 0 ? $blue : $green
+                    );
+                }
+                if ($coordinates[$i]['value'] != null) {
+                    if ($coordinates[$i]['value']->monthdetail->id == 12 && $i != (count($coordinates) - 1)) {
+                        imagesetthickness($imggd, 5);
+                        imageline(
+                            $imggd,
+                            $coordinates[$i]['x'] + $intervalxcoordinate / 2,
+                            1230,
+                            $coordinates[$i]['x'] + $intervalxcoordinate / 2,
+                            1135,
+                            $blue
+                        );
+                        imagesetthickness($imggd, 25);
+                    }
+                }
+            }
+
+            imagepng($imggd, 'template/brs_result.png');
+
+            $img = Image::make('template/brs_result.png');
+
+            for ($i = 0; $i < count($coordinates); $i++) {
+                $img->text(
+                    $coordinates[$i]['value'] != null ?
+                        Utilities::getFormattedNumber($coordinates[$i]['value']->INFMOM, 2, false) : 0,
+                    $coordinates[$i]['x'],
+                    $coordinates[$i]['y'] - 50,
+                    function ($font) use ($color, $coordinates, $i) {
+                        $font->file(public_path('assets/fonts/metropolis/Metropolis-Bold.otf'));
+                        $font->size(50);
+                        $font->color($coordinates[$i]['value'] != null ? $color['blue'] : $color['red']);
+                        $font->align('center');
+                    }
+                );
+                $c = ($i % 2) == 0 ? $color['blue'] : $color['green'];
+                $img->circle(
+                    30,
+                    $coordinates[$i]['x'],
+                    $coordinates[$i]['y'],
+                    function ($draw) use ($c, $i, $color) {
+                        $draw->background($i != 0 ? $c : $color['green']);
+                    }
+                );
+                $img->text(
+                    $coordinates[$i]['value'] != null ?
+                        substr($coordinates[$i]['value']->monthdetail->name, 0, 3) . ' ' . substr($coordinates[$i]['value']->yeardetail->name, 2, 2) : 'Na',
+                    $coordinates[$i]['x'],
+                    $minycoordinate + 70,
+                    function ($font) use ($color) {
+                        $font->file(public_path('assets/fonts/metropolis/Metropolis-Regular.otf'));
+                        $font->size(30);
+                        $font->color($color['blue']);
+                        $font->align('center');
+                        $font->valign('bottom');
+                    }
+                );
+            }
+
+            $tempstartxcoordinate = $startxcoordinate;
+            foreach ($yearscount as $year => $value) {
+                $tempstartxcoordinate = $tempstartxcoordinate + ($intervalxcoordinate * $value);
+                $img->text(
+                    $year . ' (2018=100)',
+                    $tempstartxcoordinate - ($intervalxcoordinate * $value) / 2,
+                    $minycoordinate + 130,
+                    function ($font) use ($color) {
+                        $font->file(public_path('assets/fonts/metropolis/Metropolis-Regular.otf'));
+                        $font->size(25);
+                        $font->color($color['blue']);
+                        $font->align('center');
+                        $font->valign('bottom');
+                    }
+                );
+            }
+
+            $graphbarcoordinates = [];
+
+            $max = $infcurrentbygroup->max('ANDILMOM');
+            $min = $infcurrentbygroup->min('ANDILMOM');
+
+            $maxycoordinate = 1750;
+            $minycoordinate = 2330;
+
+            $grad = ($minycoordinate - $maxycoordinate) / ((float)$min - (float)$max);
+            $const = $minycoordinate - $grad * (float)$min;
+
+            $startxcoordinate = 290;
+            $intervalxcoordinate = 196;
+            $graphbarwidth = $intervalxcoordinate - 20;
+
+            $tempstartxcoordinate = $startxcoordinate;
+
+            foreach ($infcurrentbygroup as $inf) {
+                $coordinate = [];
+                $coordinate['y'] = (int)($grad * ($inf != null ? $inf->ANDILMOM : 0) + $const);
+                $coordinate['x'] = (int)($tempstartxcoordinate);
+                $coordinate['value'] = $inf;
+                $tempstartxcoordinate += $intervalxcoordinate;
+                $graphbarcoordinates[] = $coordinate;
+            }
+
+            $ycoordinatezero = (int)($const);
+
+            for ($i = 0; $i < count($graphbarcoordinates); $i++) {
+                $img->rectangle(
+                    $graphbarcoordinates[$i]['x'] - $graphbarwidth / 2,
+                    $graphbarcoordinates[$i]['y'],
+                    $graphbarcoordinates[$i]['x'] + $graphbarwidth / 2,
+                    $ycoordinatezero,
+                    function ($draw) use ($color, $graphbarcoordinates, $i) {
+                        $draw->background($graphbarcoordinates[$i]['value']->ANDILMOM >= 0 ? $color['blue'] : $color['green']);
+                    }
+                );
+
+                $img->text(
+                    Utilities::getFormattedNumber($graphbarcoordinates[$i]['value']->ANDILMOM, 4, false) . '%',
+                    $graphbarcoordinates[$i]['x'],
+                    $graphbarcoordinates[$i]['y'] - 30,
+                    function ($font) use ($color) {
+                        $font->file(public_path('assets/fonts/metropolis/Metropolis-Bold.otf'));
+                        $font->size(35);
+                        $font->color($color['blue']);
+                        $font->align('center');
+                        $font->valign('bottom');
+                    }
+                );
+            }
+
+            $jatimarea = [
+                'inf' => collect(),
+                'def' => collect()
+            ];
+
+            $jatimarea['inf'] = $jatimarea['inf']->sort(function ($a, $b) {
+                if ($a->INFMOM == $b->INFMOM) {
+                    return 0;
+                }
+                return ($a->INFMOM < $b->INFMOM) ? 1 : -1;
+            });
+
+            $jatimarea['def'] = $jatimarea['def']->sort(function ($a, $b) {
+                if ($a->INFMOM == $b->INFMOM) {
+                    return 0;
+                }
+                return ($a->INFMOM < $b->INFMOM) ? -1 : 1;
+            });
+
+            $jatimbyareawithcoordinate = collect();
+
+            foreach ($infbyarea as $area) {
+                if (substr($area->area_code, 0, 2) == '35') {
+                    if ($area->INFMOM > 0)
+                        $jatimarea['inf']->push($area);
+                    else if ($area->INFMOM < 0)
+                        $jatimarea['def']->push($area);
+
+
+                    if ($area->area_code == '3571') {
+                        $area->xcoordinate = 1065;
+                        $area->ycoordinate = 2961;
+                    } else if ($area->area_code == '3574') {
+                        $area->xcoordinate = 1613;
+                        $area->ycoordinate = 2732;
+                    } else if ($area->area_code == '3509') {
+                        $area->xcoordinate = 1722;
+                        $area->ycoordinate = 3192;
+                    } else if ($area->area_code == '3510') {
+                        $area->xcoordinate = 2016;
+                        $area->ycoordinate = 3028;
+                    } else if ($area->area_code == '3529') {
+                        $area->xcoordinate = 1908;
+                        $area->ycoordinate = 2739;
+                    } else if ($area->area_code == '3573') {
+                        $area->xcoordinate = 1494;
+                        $area->ycoordinate = 3161;
+                    } else if ($area->area_code == '3577') {
+                        $area->xcoordinate = 1227;
+                        $area->ycoordinate = 2663;
+                    } else if ($area->area_code == '3578') {
+                        $area->xcoordinate = 1500;
+                        $area->ycoordinate = 2605;
+                    }
+                    $jatimbyareawithcoordinate->put($area->area_code, $area);
+                }
+            }
+
+            $img->text(
+                count($jatimarea['inf']) > 0 ? count($jatimarea['inf']) . ' kota mengalami inflasi' : 'Tidak ada kota mengalami inflasi',
+                276,
+                2465,
+                function ($font) use ($color) {
+                    $font->file(public_path('assets/fonts/metropolis/Metropolis-Regular.otf'));
+                    $font->size(35);
+                    $font->color($color['white']);
+                    $font->align('left');
+                }
+            );
+
+            $img->text(
+                count($jatimarea['def']) > 0 ? count($jatimarea['def']) . ' kota mengalami deflasi' : 'Tidak ada kota mengalami deflasi',
+                276,
+                2538,
+                function ($font) use ($color) {
+                    $font->file(public_path('assets/fonts/metropolis/Metropolis-Regular.otf'));
+                    $font->size(35);
+                    $font->color($color['black']);
+                    $font->align('left');
+                }
+            );
+
+            foreach ($jatimbyareawithcoordinate as $key => $area) {
+                $img->circle(175, $area->xcoordinate, $area->ycoordinate, function ($draw) use ($color, $area) {
+                    $draw->background(Utilities::isInflation($area->INFMOM) ? $color['blue'] : $color['green']);
+                });
+
+                $img->text(
+                    ucwords(strtolower($area->area_name)),
+                    $area->xcoordinate,
+                    $area->ycoordinate - 15,
+                    function ($font) use ($color, $area) {
+                        $font->file(public_path('assets/fonts/metropolis/Metropolis-Regular.otf'));
+                        $font->size(24);
+                        $font->color(Utilities::isInflation($area->INFMOM) ? $color['yellow'] : $color['black']);
+                        $font->align('center');
+                    }
+                );
+
+                $img->text(
+                    Utilities::getFormattedNumber($area->INFMOM) . '%',
+                    $area->xcoordinate,
+                    $area->ycoordinate + 40,
+                    function ($font) use ($color, $area) {
+                        $font->file(public_path('assets/fonts/metropolis/Metropolis-Bold.otf'));
+                        $font->size(40);
+                        $font->color(Utilities::isInflation($area->INFMOM) ? $color['yellow'] : $color['black']);
+                        $font->align('center');
+                    }
+                );
+            }
+
+            $sentence =
+                explode('\n', 'Dari ' . (count($jatimarea['inf']) + count($jatimarea['def'])) . ' kota IHK di Jawa Timur, \n' .
+                    (count($jatimarea['inf']) > 0 ? ((count($jatimarea['inf']) == (count($jatimarea['inf']) + count($jatimarea['def'])) ? 'seluruh' : (count($jatimarea['inf']))) . ' kota mengalami inflasi') : '') .
+                    (count($jatimarea['inf']) > 0 && count($jatimarea['def']) > 0 ? ' dan ' : '') .
+                    (count($jatimarea['def']) > 0 ? ((count($jatimarea['def']) == (count($jatimarea['def']) + count($jatimarea['def'])) ? 'seluruh' : (count($jatimarea['def']))) . ' kota mengalami deflasi') : '') .
+                    '.\n' .
+
+                    (count($jatimarea['inf']) > 0 ? (count($jatimarea['inf']) == 1 ?
+                        ('Inflasi terjadi di ' . Utilities::getAreaType($jatimarea['inf']->first()->area_code) . ' ' . ucfirst(strtolower($jatimarea['inf']->first()->area_name)) . '\nsebesar ' . Utilities::getFormattedNumber($jatimarea['inf']->first()->INFMOM) . ' persen dengan IHK sebesar ' . Utilities::getFormattedNumber($jatimarea['inf']->first()->IHK) . '. ')
+                        : ('Inflasi tertinggi terjadi di ' . Utilities::getAreaType($jatimarea['inf']->first()->area_code) . ' ' .
+                            ucfirst(strtolower($jatimarea['inf']->first()->area_name)) . '\nsebesar ' . Utilities::getFormattedNumber($jatimarea['inf']->first()->INFMOM) .
+                            ' persen dengan IHK sebesar ' . Utilities::getFormattedNumber($jatimarea['inf']->first()->IHK) .
+
+                            '\ndan inflasi terendah terjadi di ' . Utilities::getAreaType($jatimarea['inf']->last()->area_code) . ' ' .
+                            ucfirst(strtolower($jatimarea['inf']->last()->area_name)) . '\nsebesar ' . Utilities::getFormattedNumber($jatimarea['inf']->last()->INFMOM) .
+                            ' persen dengan IHK sebesar ' . Utilities::getFormattedNumber($jatimarea['inf']->last()->IHK) . '.\n')) : '') .
+
+                    (count($jatimarea['def']) > 0 ? (count($jatimarea['def']) == 1 ?
+                        ('Deflasi terjadi di ' . Utilities::getAreaType($jatimarea['def']->first()->area_code) . ' ' . ucfirst(strtolower($jatimarea['def']->first()->area_name)) . '\nsebesar ' . Utilities::getFormattedNumber($jatimarea['def']->first()->INFMOM) . ' persen dengan IHK sebesar ' . Utilities::getFormattedNumber($jatimarea['def']->first()->IHK) . '. ')
+                        : ('Deflasi tertinggi terjadi di ' . Utilities::getAreaType($jatimarea['def']->first()->area_code) . ' ' .
+                            ucfirst(strtolower($jatimarea['def']->first()->area_name)) . '\nsebesar ' . Utilities::getFormattedNumber($jatimarea['def']->first()->INFMOM) .
+                            ' persen dengan IHK sebesar ' . Utilities::getFormattedNumber($jatimarea['def']->first()->IHK) .
+
+                            '\ndan deflasi terendah terjadi di ' . Utilities::getAreaType($jatimarea['def']->last()->area_code) . ' ' .
+                            ucfirst(strtolower($jatimarea['def']->last()->area_name)) . '\nsebesar ' . Utilities::getFormattedNumber($jatimarea['def']->last()->INFMOM) .
+                            ' persen dengan IHK sebesar ' . Utilities::getFormattedNumber($jatimarea['def']->last()->IHK) . '.')) : ''));
+
+
+            for ($i = 0; $i < count($sentence); $i++) {
+                $offset = 2673 + ($i * 50);
+                $img->text($sentence[$i], 130, $offset, function ($font) use ($color) {
+                    $font->file(public_path('assets/fonts/metropolis/Metropolis-Regular.otf'));
+                    $font->size(33);
+                    $font->color($color['blue']);
+                    $font->align('left');
+                });
+            }
+
+            $img->save('template/brs_result.png');
+
+            // Storage::download('/template/brs_result.png', 'a.png', ['Content-Type: image/png']);
+
+            $filePath = public_path("template/brs_result.png");
+            $headers = ['Content-Type: image/png'];
+            $fileName = 'Infografis ' . $infcurrent->monthdetail->name . ' ' . $infcurrent->yeardetail->name . '.png';
+
+            return response()->download($filePath, $fileName, $headers);
+
+            // return redirect('/generate-info')->with('success-upload', 'Infografis Berhasil di Generate');;
+        } else {
+            $error = [];
+            if ($infcurrent == null) $error[] = 'Belum Upload Data Inflasi ' . $currentmonth->name . ' ' . $currentyear->name;
+            if (count($infbyarea) == 0) $error[] = 'Belum Upload Data Inflasi Per Kota ' . $currentmonth->name . ' ' . $currentyear->name;
+
+            return redirect('/generate-info')->with('error-generate', $error);;
         }
-
-        $img->save('template/brs_result.png');
-
-
-        return 'done';
     }
 }

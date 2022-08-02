@@ -39,6 +39,15 @@
         </button>
     </div>
     @endif
+    @if (session('success-upload'))
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <span class="alert-icon"><i class="fas fa-check-circle"></i></span>
+        <span class="alert-text"><strong>Sukses! </strong>{{ session('success-upload') }} </span>
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">×</span>
+        </button>
+    </div>
+    @endif
     <div class="row">
         <div class="col">
             <div class="card-wrapper">
