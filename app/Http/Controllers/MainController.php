@@ -349,7 +349,37 @@ class MainController extends Controller
 
             //Bab 1. Paragraf kedua
 
+            //Bab 1. Paragraf ketiga
+
+            $infcurrent = InflationData::where([
+                'month_id' => $currentmonth->id,
+                'year_id' => $currentyear->id
+            ])->orderByDesc('INFMOM')->get();
+
+            $mostinf = [];
+            $mostdef = [];
+            for ($i = 0; $i < 10; $i++) {
+                if ($infcurrent[$i]->INFMOM != 0)
+                    $mostinf[] = trim(strtolower($infcurrent[$i]->item_name));
+            }
+
+            for ($i = (count($infcurrent) - 1); $i > (count($infcurrent) - 11); $i--) {
+                if ($infcurrent[$i]->INFMOM != 0)
+                    $mostdef[] = trim(strtolower($infcurrent[$i]->item_name));
+            }
+
+            $result['Indeks Harga Konsumen/Inflasi Menurut Kelompok']['third'] = 'Beberapa komoditas yang mengalami kenaikan harga pada ' . $currentmonth->name . ' ' . $currentyear->name . ', antara lain: ' .
+                Utilities::getSentenceFromArray($mostinf) . '. Sementara komoditas yang mengalami penurunan harga, antara lain: ' . Utilities::getSentenceFromArray($mostdef) . '.';
+
+            //Bab 1. Paragraf ketiga
+
             //Bab 1. Paragraf keempat
+            $infcurrent = InflationData::where([
+                'month_id' => $currentmonth->id,
+                'year_id' => $currentyear->id,
+                'flag' => 0
+            ])->first();
+
             $sentence_group = [
                 'inf' => [],
                 'def' => [],
@@ -383,12 +413,6 @@ class MainController extends Controller
 
             //Bab 1. Paragraf keempat
 
-            //Bab 1. Paragraf ketiga
-
-
-
-            //Bab 1. Paragraf ketiga
-
             //Bab 1. Detail Inflasi per Kelompok
             $infcurrent = InflationData::where([
                 'month_id' => $currentmonth->id,
@@ -399,132 +423,138 @@ class MainController extends Controller
             foreach ($kelompok as $k) {
                 $paragraph_array = [];
 
+                $paragraph_array['first'] = 'Kelompok ini pada ' . $k->monthdetail->name . ' ' . $k->yeardetail->name . ' tidak mengalami perubahan atau tidak memberikan andil/sumbangan terhadap inflasi Kota Probolinggo.';
+                //paragraf pertama
+
+                $infprev = InflationData::where([
+                    'month_id' => $prevmonth->id,
+                    'year_id' => $prevyear->id,
+                    'item_code' => $k->item_code
+                ])->first();
+
                 if ($k->INFMOM == 0) {
-                    $paragraph_array['first'] = 'Kelompok ini pada ' . $k->monthdetail->name . ' ' . $k->yeardetail->name . ' tidak mengalami perubahan atau tidak memberikan andil/sumbangan terhadap inflasi Kota Probolinggo.';
+                    $paragraph_array['first'] = 'Kelompok ini pada ' . $k->monthdetail->name . ' ' . $k->yeardetail->name .
+                        ' tidak mengalami inflasi maupun deflasi, hal ini ditunjukkan oleh tidak berubahnya indeks yaitu ' .
+                        Utilities::getFormattedNumber($k->IHK) . ' pada ' . $prevmonth->name . ' ' . $prevyear->name .
+                        ' dan ' . $k->monthdetail->name . ' ' . $k->yeardetail->name . '.';
                 } else {
-                    //paragraf pertama
-
-                    $infprev = InflationData::where([
-                        'month_id' => $prevmonth->id,
-                        'year_id' => $prevyear->id,
-                        'item_code' => $k->item_code
-                    ])->first();
-
                     $paragraph_array['first'] = 'Kelompok ini pada ' . $k->monthdetail->name . ' ' . $k->yeardetail->name .
                         ' mengalami ' . Utilities::getInfTypeString($k->INFMOM) . ' sebesar ' .
                         Utilities::getFormattedNumber($k->INFMOM) . ' persen atau terjadi ' . Utilities::getInfTrendString($k->INFMOM) .
                         ' indeks dari ' . Utilities::getFormattedNumber($infprev->IHK) . ' pada ' . $infprev->monthdetail->name . ' ' . $infprev->yeardetail->name .
                         ' menjadi ' . Utilities::getFormattedNumber($k->IHK) . ' pada ' . $k->monthdetail->name . ' ' . $k->yeardetail->name;
-
-                    //paragraf pertama
-
-                    //paragraf kedua
-                    $subkelompok =  InflationData::where([
-                        'month_id' => $currentmonth->id,
-                        'year_id' => $currentyear->id,
-                        'flag' => 2,
-                    ])->where('item_code', 'LIKE', $k->item_code . '%')->get();
-
-                    $subkelompok_group = [
-                        'inf' => [],
-                        'def' => [],
-                        'still' => []
-                    ];
-                    foreach ($subkelompok as $sk) {
-                        if ($sk->INFMOM > 0) $subkelompok_group['inf'][] = $sk;
-                        else if ($sk->INFMOM == 0) $subkelompok_group['still'][] = $sk;
-                        else $subkelompok_group['def'][] = $sk;
-                    }
-                    $sentence = [
-                        'first' => [],
-                        'second' => []
-                    ];
-                    foreach ($subkelompok_group as $key => $value) {
-                        $s = [];
-                        foreach ($value as $v) {
-                            $s[] = 'subkelompok ' . strtolower($v->item_name) . (($v->INFMOM != 0 ? (' sebesar ' . Utilities::getFormattedNumber($v->INFMOM) . ' persen') : ''));
-                        }
-                        if (count($value) != 0) {
-                            if ($key == 'inf') {
-                                $sentence['first'][] = count($value) . ' subkelompok mengalami inflasi';
-                                $sentence['second'][] = 'Subkelompok yang mengalami inflasi yaitu: ' . Utilities::getSentenceFromArray($s, '; ');
-                            } else if ($key == 'def') {
-                                $sentence['first'][] = count($value) . ' subkelompok mengalami deflasi';
-                                $sentence['second'][] = 'Subkelompok yang mengalami deflasi yaitu: ' . Utilities::getSentenceFromArray($s, '; ');
-                            } else {
-                                $sentence['first'][] = count($value) . ' subkelompok tidak mengalami perubahan';
-                                $sentence['second'][] = 'Subkelompok yang tidak mengalami perubahan yaitu: ' . Utilities::getSentenceFromArray($s, '; ');
-                            }
-                        }
-                    }
-
-                    $paragraph_array['second'] = 'Dari ' . count($subkelompok) . ' subkelompok pada kelompok ini, ' . Utilities::getSentenceFromArray($sentence['first']) . '. ' . Utilities::getSentenceFromArray($sentence['second'], '. ', '. Sedangkan ');
-                    //paragraf kedua
-
-                    //paragraf ketiga
-                    $komoditas = InflationData::where([
-                        'month_id' => $currentmonth->id,
-                        'year_id' => $currentyear->id,
-                        'flag' => 3,
-                    ])->where('item_code', 'LIKE', $k->item_code . '%')->get();
-
-                    $komoditas_group = [
-                        'inf' => collect(),
-                        'def' => collect()
-                    ];
-                    foreach ($komoditas as $kom) {
-                        if ($kom->INFMOM > 0) $komoditas_group['inf']->push($kom);
-                        else if ($kom->INFMOM < 0) $komoditas_group['def']->push($kom);
-                    }
-
-                    $komoditas_group['inf'] = $komoditas_group['inf']->sort(function ($a, $b) {
-                        if ($a->ANDILMOM == $b->ANDILMOM) {
-                            return 0;
-                        }
-                        return ($a->ANDILMOM < $b->ANDILMOM) ? 1 : -1;
-                    });
-
-                    $komoditas_group['def'] = $komoditas_group['def']->sort(function ($a, $b) {
-                        if ($a->ANDILMOM == $b->ANDILMOM) {
-                            return 0;
-                        }
-                        return ($a->ANDILMOM < $b->ANDILMOM) ? -1 : 1;
-                    });
-
-                    if ($k->item_code == '01') {
-                        $komoditas_group['inf'] = $komoditas_group['inf']->take(10);
-                        $komoditas_group['def'] = $komoditas_group['def']->take(10);
-                    }
-
-                    $sentence = [];
-                    $domninant_wd = $k->item_code == '01' ? 'dominan' : '';
-
-                    foreach ($komoditas_group as $key => $value) {
-                        $s = [];
-                        foreach ($value as $v) {
-                            $s[] = strtolower($v->item_name) . ' sebesar ' . Utilities::getFormattedNumber($v->ANDILMOM, 4) . ' persen';
-                        }
-                        if ($key == 'inf') {
-                            if (count($value) > 1) {
-                                $sentence[] = 'Komoditas yang ' . $domninant_wd . ' memberikan andil/sumbangan inflasi, yaitu ' . Utilities::getSentenceFromArray($s);
-                            } else if (count($value)  == 1) {
-                                $sentence[] = 'Satu-satunya komoditas yang memberikan andil/sumbangan inflasi, yaitu ' . Utilities::getSentenceFromArray($s);
-                            } else {
-                                $sentence[] = 'Tidak ada komoditas yang memberikan andil/sumbangan inflasi';
-                            }
-                        } else if ($key == 'def') {
-                            if (count($value) > 1) {
-                                $sentence[] = 'Komoditas yang ' . $domninant_wd . ' memberikan andil/sumbangan deflasi, yaitu ' . Utilities::getSentenceFromArray($s);
-                            } else if (count($value)  == 1) {
-                                $sentence[] = 'Satu-satunya komoditas yang memberikan andil/sumbangan deflasi, yaitu ' . Utilities::getSentenceFromArray($s);
-                            } else {
-                                $sentence[] = 'Sementara, tidak ada komoditas yang memberikan andil/sumbangan deflasi';
-                            }
-                        }
-                    }
-                    $paragraph_array['third'] = 'Kelompok ini pada ' . $k->monthdetail->name . ' ' . $k->yeardetail->name . ' memberikan andil/sumbangan ' . Utilities::getInfTypeString($k->ANDILMOM) . ' sebesar ' . Utilities::getFormattedNumber($k->ANDILMOM, 4) . ' persen. ' . Utilities::getSentenceFromArray($sentence, '. ', '. ') . '.';
-                    //paragraf ketiga
                 }
+
+                //paragraf pertama
+
+                //paragraf kedua
+                $subkelompok =  InflationData::where([
+                    'month_id' => $currentmonth->id,
+                    'year_id' => $currentyear->id,
+                    'flag' => 2,
+                ])->where('item_code', 'LIKE', $k->item_code . '%')->get();
+
+                $subkelompok_group = [
+                    'inf' => [],
+                    'def' => [],
+                    'still' => []
+                ];
+                foreach ($subkelompok as $sk) {
+                    if ($sk->INFMOM > 0) $subkelompok_group['inf'][] = $sk;
+                    else if ($sk->INFMOM == 0) $subkelompok_group['still'][] = $sk;
+                    else $subkelompok_group['def'][] = $sk;
+                }
+                $sentence = [
+                    'first' => [],
+                    'second' => []
+                ];
+                foreach ($subkelompok_group as $key => $value) {
+                    $s = [];
+                    foreach ($value as $v) {
+                        $s[] = 'subkelompok ' . strtolower($v->item_name) . (($v->INFMOM != 0 ? (' sebesar ' . Utilities::getFormattedNumber($v->INFMOM) . ' persen') : ''));
+                    }
+                    if (count($value) != 0) {
+                        if ($key == 'inf') {
+                            $sentence['first'][] = count($value) . ' subkelompok mengalami inflasi';
+                            $sentence['second'][] = 'Subkelompok yang mengalami inflasi yaitu: ' . Utilities::getSentenceFromArray($s, '; ');
+                        } else if ($key == 'def') {
+                            $sentence['first'][] = count($value) . ' subkelompok mengalami deflasi';
+                            $sentence['second'][] = 'Subkelompok yang mengalami deflasi yaitu: ' . Utilities::getSentenceFromArray($s, '; ');
+                        } else {
+                            $sentence['first'][] = count($value) . ' subkelompok tidak mengalami perubahan';
+                            $sentence['second'][] = 'Subkelompok yang tidak mengalami perubahan yaitu: ' . Utilities::getSentenceFromArray($s, '; ');
+                        }
+                    }
+                }
+
+                $paragraph_array['second'] = 'Dari ' . count($subkelompok) . ' subkelompok pada kelompok ini, ' . Utilities::getSentenceFromArray($sentence['first']) . '. ' . Utilities::getSentenceFromArray($sentence['second'], '. ', '. Sedangkan ');
+                //paragraf kedua
+
+                //paragraf ketiga
+                $komoditas = InflationData::where([
+                    'month_id' => $currentmonth->id,
+                    'year_id' => $currentyear->id,
+                    'flag' => 3,
+                ])->where('item_code', 'LIKE', $k->item_code . '%')->get();
+
+                $komoditas_group = [
+                    'inf' => collect(),
+                    'def' => collect()
+                ];
+                foreach ($komoditas as $kom) {
+                    if ($kom->INFMOM > 0) $komoditas_group['inf']->push($kom);
+                    else if ($kom->INFMOM < 0) $komoditas_group['def']->push($kom);
+                }
+
+                $komoditas_group['inf'] = $komoditas_group['inf']->sort(function ($a, $b) {
+                    if ($a->ANDILMOM == $b->ANDILMOM) {
+                        return 0;
+                    }
+                    return ($a->ANDILMOM < $b->ANDILMOM) ? 1 : -1;
+                });
+
+                $komoditas_group['def'] = $komoditas_group['def']->sort(function ($a, $b) {
+                    if ($a->ANDILMOM == $b->ANDILMOM) {
+                        return 0;
+                    }
+                    return ($a->ANDILMOM < $b->ANDILMOM) ? -1 : 1;
+                });
+
+                if ($k->item_code == '01') {
+                    $komoditas_group['inf'] = $komoditas_group['inf']->take(10);
+                    $komoditas_group['def'] = $komoditas_group['def']->take(10);
+                }
+
+                $sentence = [];
+                $domninant_wd = $k->item_code == '01' ? 'dominan' : '';
+
+                foreach ($komoditas_group as $key => $value) {
+                    $s = [];
+                    foreach ($value as $v) {
+                        $s[] = strtolower($v->item_name) . ' sebesar ' . Utilities::getFormattedNumber($v->ANDILMOM, 4) . ' persen';
+                    }
+                    if ($key == 'inf') {
+                        if (count($value) > 1) {
+                            $sentence[] = 'Komoditas yang ' . $domninant_wd . ' memberikan andil/sumbangan inflasi, yaitu ' . Utilities::getSentenceFromArray($s);
+                        } else if (count($value)  == 1) {
+                            $sentence[] = 'Satu-satunya komoditas yang memberikan andil/sumbangan inflasi, yaitu ' . Utilities::getSentenceFromArray($s);
+                        } else {
+                            $sentence[] = 'Tidak ada komoditas yang memberikan andil/sumbangan inflasi';
+                        }
+                    } else if ($key == 'def') {
+                        if (count($value) > 1) {
+                            $sentence[] = 'Komoditas yang ' . $domninant_wd . ' memberikan andil/sumbangan deflasi, yaitu ' . Utilities::getSentenceFromArray($s);
+                        } else if (count($value)  == 1) {
+                            $sentence[] = 'Satu-satunya komoditas yang memberikan andil/sumbangan deflasi, yaitu ' . Utilities::getSentenceFromArray($s);
+                        } else {
+                            $sentence[] = 'Sementara, tidak ada komoditas yang memberikan andil/sumbangan deflasi';
+                        }
+                    }
+                }
+                $paragraph_array['third'] =  ($k->ANDILMOM != 0 ? ('Kelompok ini pada ' . $k->monthdetail->name . ' ' . $k->yeardetail->name . ' memberikan andil/sumbangan ' . Utilities::getInfTypeString($k->ANDILMOM) . ' sebesar ' . Utilities::getFormattedNumber($k->ANDILMOM, 4) . ' persen. ') : ('Kelompok ini pada ' . $k->monthdetail->name . ' ' . $k->yeardetail->name . ' tidak memberikan andil/sumbangan inflasi. ')) .
+                    ((count($komoditas_group['inf']) != 0 || count($komoditas_group['def']) != 0) ? (Utilities::getSentenceFromArray($sentence, '. ', '. ')) : 'Tidak ada komoditas yang memberikan andil/sumbangan inflasi maupun deflasi') . '.';
+                //paragraf ketiga
+
 
                 $kelompok_result[$k->item_name] = $paragraph_array;
             }
