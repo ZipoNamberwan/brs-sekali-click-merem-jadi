@@ -1764,7 +1764,7 @@ class MainController extends Controller
                 '.\n' .
 
                 (count($jatimarea['inf']) > 0 ? (count($jatimarea['inf']) == 1 ?
-                    ('Inflasi terjadi di ' . Utilities::getAreaType($jatimarea['inf']->first()->area_code) . ' ' . ucfirst(strtolower($jatimarea['inf']->first()->area_name)) . '\nsebesar ' . Utilities::getFormattedNumber($jatimarea['inf']->first()->INFMOM) . ' persen dengan IHK sebesar ' . Utilities::getFormattedNumber($jatimarea['inf']->first()->IHK) . '. ')
+                    ('Inflasi terjadi di ' . Utilities::getAreaType($jatimarea['inf']->first()->area_code) . ' ' . ucfirst(strtolower($jatimarea['inf']->first()->area_name)) . '\nsebesar ' . Utilities::getFormattedNumber($jatimarea['inf']->first()->INFMOM) . ' persen dengan IHK sebesar ' . Utilities::getFormattedNumber($jatimarea['inf']->first()->IHK) . '. \n')
                     : ('Inflasi tertinggi terjadi di ' . Utilities::getAreaType($jatimarea['inf']->first()->area_code) . ' ' .
                         ucfirst(strtolower($jatimarea['inf']->first()->area_name)) . '\nsebesar ' . Utilities::getFormattedNumber($jatimarea['inf']->first()->INFMOM) .
                         ' persen dengan IHK sebesar ' . Utilities::getFormattedNumber($jatimarea['inf']->first()->IHK) .
@@ -1774,7 +1774,7 @@ class MainController extends Controller
                         ' persen dengan IHK sebesar ' . Utilities::getFormattedNumber($jatimarea['inf']->last()->IHK) . '.\n')) : '') .
 
                 (count($jatimarea['def']) > 0 ? (count($jatimarea['def']) == 1 ?
-                    ('Deflasi terjadi di ' . Utilities::getAreaType($jatimarea['def']->first()->area_code) . ' ' . ucfirst(strtolower($jatimarea['def']->first()->area_name)) . '\nsebesar ' . Utilities::getFormattedNumber($jatimarea['def']->first()->INFMOM) . ' persen dengan IHK sebesar ' . Utilities::getFormattedNumber($jatimarea['def']->first()->IHK) . '. ')
+                    ('Deflasi terjadi di ' . Utilities::getAreaType($jatimarea['def']->first()->area_code) . ' ' . ucfirst(strtolower($jatimarea['def']->first()->area_name)) . '\nsebesar ' . Utilities::getFormattedNumber($jatimarea['def']->first()->INFMOM) . ' persen dengan IHK sebesar ' . Utilities::getFormattedNumber($jatimarea['def']->first()->IHK) . '. \n')
                     : ('Deflasi tertinggi terjadi di ' . Utilities::getAreaType($jatimarea['def']->first()->area_code) . ' ' .
                         ucfirst(strtolower($jatimarea['def']->first()->area_name)) . '\nsebesar ' . Utilities::getFormattedNumber($jatimarea['def']->first()->INFMOM) .
                         ' persen dengan IHK sebesar ' . Utilities::getFormattedNumber($jatimarea['def']->first()->IHK) .
