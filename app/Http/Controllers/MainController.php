@@ -1562,6 +1562,38 @@ class MainController extends Controller
         $img = Image::make($target);
 
         for ($i = 0; $i < count($coordinates); $i++) {
+
+            // if ($i == (count($coordinates) - 1)) {
+            //     $slope = ($coordinates[$i - 1]['y'] - $coordinates[$i]['y']) / ($coordinates[$i - 1]['x'] - $coordinates[$i]['x']);
+            //     $midx = ($coordinates[$i - 1]['x'] + $coordinates[$i]['x']) / 2;
+            //     $midy = ($coordinates[$i - 1]['y'] + $coordinates[$i]['y']) / 2;
+
+            //     // equation perpendicular inflation line
+            //     $slopeppd = 1 / $slope * -1;
+            //     $constppd = $midy - $slopeppd * $midx;
+
+            //     $distance = 50;
+
+
+            //     $degree = rad2deg(atan($slope)) * -1;
+            //     $truk = Image::make('template/truk.png');
+            //     $truk->rotate($degree != 0 ? $degree : -1);
+            //     $truk->save('template/truk_result.png');
+
+            //     // $img->insert('template/truk_result.png', null, floor(($x1 + $x2) / 2), floor(($y1 + $y2) / 2 - 200));
+            //     // $img->circle(20, floor(($x1 + $x2) / 2), floor(($y1 + $y2) / 2 - 200), function ($draw) {
+            //     //     $draw->background('#0000ff');
+            //     // });
+            //     // $img->circle(20, $x1, $y1, function ($draw) {
+            //     //     $draw->background('#f00');
+            //     // });
+            //     // $img->circle(20, $x2, $y2, function ($draw) {
+            //     //     $draw->background('#f00');
+            //     // });
+            //     // $img->insert('template/truk_result.png', null, $coordinates[$i]['x'] - 200, $coordinates[$i]['y'] - 200);
+            //     // $img->insert('template/truk_result.png', null, $coordinates[$i]['x'], $coordinates[$i]['y']);
+            // }
+
             $img->text(
                 $coordinates[$i]['value'] != null ?
                     Utilities::getFormattedNumber($coordinates[$i]['value']->INFMOM, 2, false) : 0,
