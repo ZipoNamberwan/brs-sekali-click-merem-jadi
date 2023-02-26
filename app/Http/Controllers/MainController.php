@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use Intervention\Image\Facades\Image;
+use PhpOffice\PhpSpreadsheet\Style\Color;
 use ZipArchive;
 
 class MainController extends Controller
@@ -48,6 +49,21 @@ class MainController extends Controller
         $years = Year::all();
 
         return view('brs-table-index', [
+            'months' => $months,
+            'years' => $years,
+            'currentmonth' => $currentmonth,
+            'currentyear' => $currentyear
+        ]);
+    }
+
+    public function indexTableGroup()
+    {
+        $currentmonth = Month::where(['code' => date('m')])->first()->id;
+        $currentyear = Year::where(['code' => date('Y')])->first()->id;
+        $months = Month::all();
+        $years = Year::all();
+
+        return view('brs-table-group-index', [
             'months' => $months,
             'years' => $years,
             'currentmonth' => $currentmonth,
@@ -1981,5 +1997,102 @@ class MainController extends Controller
         // return redirect('/generate-info')->with('success-upload', 'Infografis Berhasil di Generate');
 
         // return 'done';
+    }
+
+    public function generateTableByGroup(Request $request)
+    {
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('a');
+
+        $kelompok =  InflationData::where([
+            'month_id' => $request->month,
+            'year_id' => $request->year,
+            'flag' => 1,
+        ])->get();
+
+        foreach ($kelompok as $kel) {
+            $sheet = $spreadsheet->createSheet();
+            $sheet->setTitle($kel->item_code . '_MOM');
+
+            $komoditas =  InflationData::where([
+                'month_id' => $request->month,
+                'year_id' => $request->year,
+                'flag' => 3,
+            ])->where('item_code', 'LIKE', $kel->item_code . '%')->orderBy('ANDILMOM')->get();
+
+            $start = 1;
+            $i = $start;
+            $sheet->setCellValue('A' . $i, 'Tahun');
+            $sheet->setCellValue('B' . $i, 'Bulan');
+            $sheet->setCellValue('C' . $i, 'Kode');
+            $sheet->setCellValue('D' . $i, 'Nama');
+            $sheet->setCellValue('E' . $i, 'Flag');
+            $sheet->setCellValue('F' . $i, 'ANDIL(MOM)');
+            $i++;
+
+            foreach ($komoditas as $k) {
+
+                $sheet->setCellValue('A' . $i, $k->yeardetail->name);
+                $sheet->setCellValue('B' . $i, $k->monthdetail->code);
+                $sheet->setCellValue('C' . $i, $k->item_code);
+                $sheet->setCellValue('D' . $i, $k->item_name);
+                $sheet->setCellValue('E' . $i, $k->flag);
+                $sheet->setCellValue('F' . $i, $k->ANDILMOM);
+
+
+                if (($i - $start) <= 10) {
+                    $sheet->getStyle('A' . $i . ':F' . $i)->getFont()->setColor(new Color(Color::COLOR_RED));
+                } else if (($i - $start) > (count($komoditas) - 10)) {
+                    $sheet->getStyle('A' . $i . ':F' . $i)->getFont()->setColor(new Color(Color::COLOR_GREEN));
+                }
+
+                $i++;
+            }
+
+            $sheet = $spreadsheet->createSheet();
+            $sheet->setTitle($kel->item_code . '_YOY');
+
+            $komoditas =  InflationData::where([
+                'month_id' => $request->month,
+                'year_id' => $request->year,
+                'flag' => 3,
+            ])->where('item_code', 'LIKE', $kel->item_code . '%')->orderBy('ANDILYOY')->get();
+
+            $i = 1;
+            $sheet->setCellValue('A' . $i, 'Tahun');
+            $sheet->setCellValue('B' . $i, 'Bulan');
+            $sheet->setCellValue('C' . $i, 'Kode');
+            $sheet->setCellValue('D' . $i, 'Nama');
+            $sheet->setCellValue('E' . $i, 'Flag');
+            $sheet->setCellValue('F' . $i, 'ANDIL(YOY)');
+            $i++;
+
+            foreach ($komoditas as $k) {
+                $sheet->setCellValue('A' . $i, $k->yeardetail->name);
+                $sheet->setCellValue('B' . $i, $k->monthdetail->code);
+                $sheet->setCellValue('C' . $i, $k->item_code);
+                $sheet->setCellValue('D' . $i, $k->item_name);
+                $sheet->setCellValue('E' . $i, $k->flag);
+                $sheet->setCellValue('F' . $i, $k->ANDILYOY);
+
+                if (($i - $start) <= 10) {
+                    $sheet->getStyle('A' . $i . ':F' . $i)->getFont()->setColor(new Color(Color::COLOR_RED));
+                } else if (($i - $start) > (count($komoditas) - 10)) {
+                    $sheet->getStyle('A' . $i . ':F' . $i)->getFont()->setColor(new Color(Color::COLOR_GREEN));
+                }
+
+                $i++;
+            }
+        }
+
+        $spreadsheet->removeSheetByIndex(0);
+
+        header('Content-Type: application/vnd.ms-excel');
+        header('Content-Disposition: attachment;filename="Tabel Inflasi per Komoditas.xls"');
+        header('Cache-Control: max-age=0');
+
+        $writer = \PhpOffice\PhpSpreadsheet\IOFactory::createWriter($spreadsheet, 'Xls');
+        $writer->save('php://output');
     }
 }

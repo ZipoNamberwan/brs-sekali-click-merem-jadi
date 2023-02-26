@@ -77,6 +77,9 @@
                                         <a href="{{url('/generate-info')}}" class="nav-link">Infografis</a>
                                     </li>
                                     <li class="nav-item">
+                                        <a href="{{url('/generate-table-group')}}" class="nav-link">Tabel Komoditas Sorted</a>
+                                    </li>
+                                    <li class="nav-item">
                                         <a href="{{url('/generate-ppt')}}" class="nav-link">Power Point (Coming Soon)</a>
                                     </li>
                                 </ul>

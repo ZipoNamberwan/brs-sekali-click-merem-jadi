@@ -17,11 +17,13 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [MainController::class, 'index']);
 Route::get('/generate-table', [MainController::class, 'indexTable']);
 Route::get('/generate-info', [MainController::class, 'indexInfographic']);
+Route::get('/generate-table-group', [MainController::class, 'indexTableGroup']);
 // Route::get('/test', [MainController::class, 'generateInfographic']);
 
 Route::get('/upload', [MainController::class, 'showUpload']);
 Route::post('/generate-text', [MainController::class, 'generateText']);
 Route::post('/generate-table', [MainController::class, 'generateTable']);
 Route::post('/generate-info', [MainController::class, 'generateInfographic']);
+Route::post('/generate-table-group', [MainController::class, 'generateTableByGroup']);
 
 Route::post('/upload', [MainController::class, 'upload']);
