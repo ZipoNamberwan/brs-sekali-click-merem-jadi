@@ -436,7 +436,7 @@ class MainController extends Controller
                 $s = [];
                 foreach ($value as $v) {
                     if ($key != 'still')
-                        $s[] = 'kelompok ' . strtolower($v->item_name) . ' sebesar ' . Utilities::getFormattedNumber($v->ANDILYOY, 4) . ' persen';
+                        $s[] = 'kelompok ' . strtolower($v->item_name) . ' sebesar ' . Utilities::getFormattedNumber($v->ANDILYOY) . ' persen';
                     else $s[] = 'kelompok ' . strtolower($v->item_name);
                 }
                 $sentence_group[$key] = Utilities::getSentenceFromArray($s, '; ', '; dan ');
@@ -570,7 +570,7 @@ class MainController extends Controller
                 foreach ($komoditas_group as $key => $value) {
                     $s = [];
                     foreach ($value as $v) {
-                        $s[] = strtolower($v->item_name) . ' sebesar ' . Utilities::getFormattedNumber($v->ANDILYOY, 4) . ' persen';
+                        $s[] = strtolower($v->item_name) . ' sebesar ' . Utilities::getFormattedNumber($v->ANDILYOY) . ' persen';
                     }
                     if ($key == 'inf') {
                         if (count($value) > 1) {
@@ -590,7 +590,7 @@ class MainController extends Controller
                         }
                     }
                 }
-                $paragraph_array['third'] =  ($k->ANDILYOY != 0 ? ('Kelompok ini pada ' . $k->monthdetail->name . ' ' . $k->yeardetail->name . ' memberikan andil/sumbangan ' . Utilities::getInfTypeString($k->ANDILYOY) . ' y-on-y sebesar ' . Utilities::getFormattedNumber($k->ANDILYOY, 4) . ' persen. ') : ('Kelompok ini pada ' . $k->monthdetail->name . ' ' . $k->yeardetail->name . ' tidak memberikan andil/sumbangan inflasi. ')) .
+                $paragraph_array['third'] =  ($k->ANDILYOY != 0 ? ('Kelompok ini pada ' . $k->monthdetail->name . ' ' . $k->yeardetail->name . ' memberikan andil/sumbangan ' . Utilities::getInfTypeString($k->ANDILYOY) . ' y-on-y sebesar ' . Utilities::getFormattedNumber($k->ANDILYOY) . ' persen. ') : ('Kelompok ini pada ' . $k->monthdetail->name . ' ' . $k->yeardetail->name . ' tidak memberikan andil/sumbangan inflasi. ')) .
                     ((count($komoditas_group['inf']) != 0 || count($komoditas_group['def']) != 0) ? (Utilities::getSentenceFromArray($sentence, '. ', '. ')) : 'Tidak ada komoditas yang memberikan andil/sumbangan inflasi maupun deflasi') . '.';
                 //paragraf ketiga
 
@@ -635,7 +635,7 @@ class MainController extends Controller
                 foreach ($komoditas_group as $key => $value) {
                     $s = [];
                     foreach ($value as $v) {
-                        $s[] = strtolower($v->item_name) . ' sebesar ' . Utilities::getFormattedNumber($v->ANDILMOM, 4) . ' persen';
+                        $s[] = strtolower($v->item_name) . ' sebesar ' . Utilities::getFormattedNumber($v->ANDILMOM) . ' persen';
                     }
                     if ($key == 'inf') {
                         if (count($value) > 1) {
@@ -655,7 +655,7 @@ class MainController extends Controller
                         }
                     }
                 }
-                $paragraph_array['fourth'] =  ($k->ANDILMOM != 0 ? ('Kelompok ini pada ' . $k->monthdetail->name . ' ' . $k->yeardetail->name . ' memberikan andil/sumbangan ' . Utilities::getInfTypeString($k->ANDILMOM) . ' m-to-m sebesar ' . Utilities::getFormattedNumber($k->ANDILMOM, 4) . ' persen. ') : ('Kelompok ini pada ' . $k->monthdetail->name . ' ' . $k->yeardetail->name . ' tidak memberikan andil/sumbangan inflasi. ')) .
+                $paragraph_array['fourth'] =  ($k->ANDILMOM != 0 ? ('Kelompok ini pada ' . $k->monthdetail->name . ' ' . $k->yeardetail->name . ' memberikan andil/sumbangan ' . Utilities::getInfTypeString($k->ANDILMOM) . ' m-to-m sebesar ' . Utilities::getFormattedNumber($k->ANDILMOM) . ' persen. ') : ('Kelompok ini pada ' . $k->monthdetail->name . ' ' . $k->yeardetail->name . ' tidak memberikan andil/sumbangan inflasi. ')) .
                     ((count($komoditas_group['inf']) != 0 || count($komoditas_group['def']) != 0) ? (Utilities::getSentenceFromArray($sentence, '. ', '. ')) : 'Tidak ada komoditas yang memberikan andil/sumbangan inflasi maupun deflasi') . '.';
                 //paragraf keempat
 
@@ -990,9 +990,9 @@ class MainController extends Controller
             $sheet->getCell('G' . $i)
                 ->setValue(Utilities::getFormattedNumber($infcurrent[$j]->INFYOY, 2, false));
             $sheet->getCell('H' . $i)
-                ->setValue(Utilities::getFormattedNumber($infcurrent[$j]->ANDILMOM, 4, false));
+                ->setValue(Utilities::getFormattedNumber($infcurrent[$j]->ANDILMOM, 2, false));
             $sheet->getCell('I' . $i)
-                ->setValue(Utilities::getFormattedNumber($infcurrent[$j]->ANDILYOY, 4, false));
+                ->setValue(Utilities::getFormattedNumber($infcurrent[$j]->ANDILYOY, 2, false));
 
             $i++;
         }
@@ -1229,13 +1229,13 @@ class MainController extends Controller
         $sheet->getCell('G5')
             ->setValue(Utilities::getFormattedNumber($currentfoodinf->INFYOY, 2, false));
         $sheet->getCell('H4')
-            ->setValue(Utilities::getFormattedNumber($currentenergyinf->ANDILMOM, 4, false));
+            ->setValue(Utilities::getFormattedNumber($currentenergyinf->ANDILMOM, 2, false));
         $sheet->getCell('H5')
-            ->setValue(Utilities::getFormattedNumber($currentfoodinf->ANDILMOM, 4, false));
+            ->setValue(Utilities::getFormattedNumber($currentfoodinf->ANDILMOM, 2, false));
         $sheet->getCell('I4')
-            ->setValue(Utilities::getFormattedNumber($currentenergyinf->ANDILYOY, 4, false));
+            ->setValue(Utilities::getFormattedNumber($currentenergyinf->ANDILYOY, 2, false));
         $sheet->getCell('I5')
-            ->setValue(Utilities::getFormattedNumber($currentfoodinf->ANDILYOY, 4, false));
+            ->setValue(Utilities::getFormattedNumber($currentfoodinf->ANDILYOY, 2, false));
 
         //Tabel 5
 
@@ -1845,7 +1845,7 @@ class MainController extends Controller
             );
 
             $img->text(
-                Utilities::getFormattedNumber($graphbarcoordinates[$i]['value']->ANDILYOY, 4, false) . '%',
+                Utilities::getFormattedNumber($graphbarcoordinates[$i]['value']->ANDILYOY, 2, false) . '%',
                 $graphbarcoordinates[$i]['x'],
                 $graphbarcoordinates[$i]['y'] - $pos['bar_atr']['value_offset'],
                 function ($font) use ($color, $pos) {
