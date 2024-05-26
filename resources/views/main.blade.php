@@ -86,7 +86,7 @@
                             </div>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="/upload">
+                            <a class="nav-link" href="/upload-new">
                                 <i class="fas fa-upload text-primary"></i>
                                 <span class="nav-link-text">Upload</span>
                             </a>

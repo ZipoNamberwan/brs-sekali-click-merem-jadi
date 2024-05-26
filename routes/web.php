@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\MainController;
+use App\Http\Controllers\UploadController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -21,9 +22,13 @@ Route::get('/generate-table-group', [MainController::class, 'indexTableGroup']);
 // Route::get('/test', [MainController::class, 'generateInfographic']);
 
 Route::get('/upload', [MainController::class, 'showUpload']);
+Route::get('/upload-new/{month?}', [UploadController::class, 'showUpload']);
 Route::post('/generate-text', [MainController::class, 'generateText']);
 Route::post('/generate-table', [MainController::class, 'generateTable']);
 Route::post('/generate-info', [MainController::class, 'generateInfographic']);
 Route::post('/generate-table-group', [MainController::class, 'generateTableByGroup']);
 
 Route::post('/upload', [MainController::class, 'upload']);
+Route::post('/upload-inf', [UploadController::class, 'uploadInflation']);
+Route::post('/upload-area', [UploadController::class, 'uploadArea']);
+Route::post('/upload-base', [UploadController::class, 'uploadNewBase']);
